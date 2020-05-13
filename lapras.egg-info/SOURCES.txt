@@ -1,6 +1,5 @@
 LICENSE
 README.md
-__init__.py
 setup.cfg
 setup.py
 lapras/__init__.py

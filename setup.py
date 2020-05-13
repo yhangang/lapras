@@ -12,7 +12,7 @@ setup(
 
     description='scorecard',
     long_description=open(filepath).read(),
-    long_description_content_type='text/markdown',
+    long_description_content_type='text/x-rst',
     url='https://github.com/yhangang',
     author='Badtom',
     author_email='yhangang@gmail.com',
