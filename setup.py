@@ -12,8 +12,8 @@ setup(
 
     description='scorecard',
     long_description=open(filepath).read(),
-    long_description_content_type='text/x-rst',
-    url='https://github.com/yhangang',
+    long_description_content_type='text/markdown',
+    url='https://github.com/yhangang/lapras',
     author='Badtom',
     author_email='yhangang@gmail.com',
     license='MIT',
