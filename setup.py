@@ -7,7 +7,7 @@ filepath = 'README.md'
 
 setup(
     name='lapras',
-    version='0.0.14',
+    version='0.0.15',
     packages = find_packages(),
 
     description='scorecard',
@@ -19,11 +19,12 @@ setup(
     license='MIT',
     python_requires = '>=3.5',
     install_requires = [
-        'numpy == 1.18.4',
-        'pandas == 0.25.1',
-        'scipy == 1.3.2',
-        'scikit-learn == 0.20.2',
-        'seaborn == 0.10.1',
+        'numpy >= 1.18.4',
+        'pandas >= 0.25.1, <=0.25.3',
+        'scipy >= 1.3.2',
+        'scikit-learn >= 0.20.2, <=0.22.2',
+        'seaborn >= 0.10.1',
+
     ],
     classifiers=[
         'Operating System :: POSIX',

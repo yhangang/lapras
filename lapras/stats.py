@@ -117,6 +117,7 @@ def VIF(frame):
     Returns:
         Series
     """
+    frame = frame.fillna(-99)
     index = None
     if isinstance(frame, pd.DataFrame):
         index = frame.columns
@@ -197,3 +198,36 @@ def quality(dataframe, target = 'target',**kwargs):
     )
     result['iv'] = result['iv'].round(decimals=6)
     return result
+
+
+def bin_stats(frame, col=None, target='target'):
+    """return detailed inforrmatiom for bins
+
+    Args:
+        frame (DataFrame)
+        x (str): column in frame that will be used as x axis
+        target (str): target column in frame
+
+    """
+    frame = frame.copy()
+    group = frame.groupby(col)
+    table = group[target].agg(['sum', 'count']).reset_index()
+    table.columns = [col,'bad_count','total_count']
+    table['bad_rate'] = table['bad_count'] / table['total_count']
+    table['ratio'] = table['total_count'] / table['total_count'].sum()
+
+    X = to_ndarray(frame[col])
+    value = np.unique(X)
+    l = len(value)
+    woe = np.zeros(l)
+    iv = np.zeros(l)
+    for i in range(l):
+        y_prob, n_prob = probability(frame[target], mask=(X == value[i]))
+        woe[i] = np.log(y_prob / n_prob)
+        iv[i] = woe[i] * (y_prob - n_prob)
+    table['woe'] = woe
+    table['iv'] = iv
+    table['total_iv'] = table.iv.replace({np.inf: 0, -np.inf: 0}).sum()
+
+    return table
+

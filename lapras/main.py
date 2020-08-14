@@ -13,18 +13,23 @@ lapras项目主流程测试
 '''
 
 to_drop = ['id']
-df = pd.read_csv('data/model_data.csv',encoding="utf-8")
+target = 'bad'
+df = pd.read_csv('data/demo.csv',encoding="utf-8")
 # print(lapras.detect(df.drop(to_drop,axis=1)))
+iv_df = lapras.quality(df.drop(to_drop,axis=1),target = target)
+print(iv_df)
+print(iv_df.index)
 
-# print(lapras.quality(df.drop(to_drop,axis=1),target = 'bad'))
-
-train_selected, dropped = lapras.select(df.drop(to_drop,axis=1),target = 'bad', empty = 0.9, \
-                                                iv = 0.02, corr = 0.7, return_drop=True, exclude=[])
+# train_selected, dropped = lapras.select(df.drop(to_drop,axis=1),target = target, empty = 0.99, \
+#                                                 iv = 0.02, corr = 1,vif = 10, return_drop=True, exclude=[])
+train_selected = df.drop(to_drop,axis=1)
 # print(dropped)
 # print(train_selected.shape)
+print(train_selected.columns)
+# print(lapras.VIF(train_selected))
 
 c = lapras.Combiner()
-c.fit(train_selected, y = 'bad', method = 'dt', min_samples = 0.05,n_bins=8)
+c.fit(train_selected, y = target, method = 'mono', min_samples = 0.05,n_bins=8)
 # c.load(
 #     {'feature1': [['nan'], ['良'], ['优']], 'feature2': [2.485, 19.105], 'feature3': [1.5, 2.5, 5.5, 9.5],
 #      'feature4': [199.95, ], 'feature6': [51.145, 62.25, 70.065],
@@ -36,19 +41,21 @@ print(c.export())
 
 # print(c.transform(train_selected, labels=True).iloc[0:10, :])
 
-cols = train_selected.columns
+cols = list(lapras.quality(train_selected,target = target).reset_index()['index'])
 # for col in cols:
-#     if col != 'bad':
-#         lapras.bin_plot(c.transform(train_selected[[col,'bad']], labels=True), col=col, target='bad')
+#     if col != target:
+#         print(lapras.bin_stats(c.transform(train_selected[[col, target]], labels=True), col=col, target=target))
+#         lapras.bin_plot(c.transform(train_selected[[col,target]], labels=True), col=col, target=target)
+
 
 # 转换为WOE值
 transfer = lapras.WOETransformer()
-train_woe = transfer.fit_transform(c.transform(train_selected), train_selected['bad'], exclude=['bad'])
+train_woe = transfer.fit_transform(c.transform(train_selected), train_selected[target], exclude=[target])
 # print(train_woe)
 # print(lapras.metrics.PSI(df['C'], df['D']))
 
 # 将woe转化后的数据做逐步回归
-final_data = lapras.selection.stepwise(train_woe,target = 'bad', estimator='ols', direction = 'both', criterion = 'aic', exclude = [])
+final_data = lapras.stepwise(train_woe,target = target, estimator='ols', direction = 'both', criterion = 'aic', exclude = [])
 
 # print(final_data.columns)
 # final_data = train_woe
@@ -58,20 +65,26 @@ card = lapras.ScoreCard(
     combiner = c,
     transfer = transfer,
 )
-col = list(final_data.drop(['bad'],axis=1).columns)
+col = list(final_data.drop([target],axis=1).columns)
 # print(col)
-card.fit(final_data[col], final_data['bad'])
+card.fit(final_data[col], final_data[target])
 
 score = card.predict(final_data[col])
 prob = card.predict_prob(final_data[col])
 final_data['score'] = score
 final_data['prob'] = prob
 # print(card.intercept_)
+print(card.coef_)
+print(min(card.coef_))
 # print(final_data[['score', 'prob']].iloc[:10,:])
 #输出标准评分卡
 print(card.export())
-print(lapras.F1(prob,final_data['bad']))
-lapras.perform(prob,final_data['bad'])
+# print(lapras.F1(prob,final_data[target]))
+# lapras.perform(prob,final_data[target])
 # score_bond = [305, 460, 490, 520, 550, 580, 610, 640, 670, 700, 730, 760, 790, 820, 850, 880, 999]
-# lapras.score_plot(final_data,score='score', target='bad')
-print(lapras.LIFT(prob,final_data['bad']))
+# lapras.score_plot(final_data,score='score', target=target)
+# print(lapras.LIFT(prob,final_data[target]))
+
+print(lapras.KS_bucket(final_data['score'], final_data[target], bucket=10, method = 'quantile'))
+
+

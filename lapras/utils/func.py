@@ -449,7 +449,7 @@ def count_point(frame, score_bond, score='score', target='bad'):
     y_rate_cent = ['%.2f%%'%(y_i *100) for y_i in list(y_rate)]
     print ('bad_rate: %s'%(y_rate_cent))
     base_score_count = Counter(list(scoredata[score]))
-    print ('重复分重复次数排序（前15个） %s'%base_score_count.most_common()[:15])
+    # print ('重复分重复次数排序（前15个） %s'%base_score_count.most_common()[:15])
     # x: 区间分段 1,2,3,4
     # ticks: 区间名称['[300, 400)', '[400, 500)',  '[500, 1000)']
     # y_count: 区间 数量， 表示评分在此区间内的样本数量

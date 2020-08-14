@@ -440,7 +440,7 @@ def drop_iv(frame, target = 'target', threshold = 0.02, return_drop = False,
     return unpack_tuple(res)
 
 
-def drop_vif(frame, threshold = 3, return_drop = False, exclude = None):
+def drop_vif(frame, threshold = 10, return_drop = False, exclude = None):
     """variance inflation factor
 
     Args:
@@ -481,7 +481,7 @@ def drop_vif(frame, threshold = 3, return_drop = False, exclude = None):
     return unpack_tuple(res)
 
 
-def select(frame, target = 'target', empty = 0.9, iv = 0.02, corr = 0.7,
+def select(frame, target = 'target', empty = 0.9, iv = 0.02, corr = 0.7, vif = False,
             return_drop = False, exclude = None):
     """select features by rate of empty, iv and correlation
 
@@ -498,7 +498,7 @@ def select(frame, target = 'target', empty = 0.9, iv = 0.02, corr = 0.7,
         DataFrame: selected dataframe
         dict: list of dropped feature names in each step
     """
-    empty_drop = iv_drop = corr_drop = None
+    empty_drop = iv_drop = corr_drop = vif_drop = None
 
     if empty is not False:
         frame, empty_drop = drop_empty(frame, threshold = empty, return_drop = True, exclude = exclude)
@@ -513,6 +513,9 @@ def select(frame, target = 'target', empty = 0.9, iv = 0.02, corr = 0.7,
             weights = iv_list
 
         frame, corr_drop = drop_corr(frame, target = target, threshold = corr, by = weights, return_drop = True, exclude = exclude)
+
+    if vif is not False:
+        frame, vif_drop = drop_vif(frame, threshold = vif,  return_drop = True, exclude = exclude)
 
     res = (frame,)
     if return_drop:

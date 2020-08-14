@@ -2,13 +2,56 @@
 
 import pandas as pd
 import numpy as np
+import math
 from sklearn.tree import DecisionTreeClassifier, _tree
 from sklearn.cluster import KMeans
 from .utils import fillna, bin_by_splits, to_ndarray, clip
 from .utils.decorator import support_dataframe
+from .utils.forwardSplit import *
 
 DEFAULT_BINS = 10
 DEFAULT_DECIMAL = 4 # 默认小数精度
+
+
+def MonoMerge(feature, target, n_bins=None, min_samples=10):
+    '''
+    :param feature: 待分箱变量
+    :param target: 目标特征
+    :param n_bins: 最多分箱数
+    :param min_sample: 每个分箱最小样本数
+    :return: numpy array -- 切割点数组
+    '''
+    df = pd.DataFrame()
+    df['feature'] = feature
+    df['target'] = target
+    df['feature'] = df['feature'].fillna(-99) #有缺失值则无法分箱
+
+    if n_bins is None:
+        n_bins = DEFAULT_BINS
+
+    if min_samples < 1:
+        min_samples = math.ceil(len(target) * min_samples)
+
+    t = forwardSplit(df['feature'], df['target'])
+    t.fit(sby='woe', minv=0.01, num_split=n_bins-1,min_sample=min_samples,init_split=20)
+
+    # 单调分箱失败，采用决策树分2箱
+    if t.bins is None:
+        bins = DTMerge(feature, target, n_bins=2, min_samples=min_samples)
+        return bins
+
+    else:
+        bins = list(t.bins)
+        bins.pop(0) # 删除分箱两边的边界值
+        bins.pop(-1) # 删除分箱两边的边界值
+
+        # 结果取4位小数
+        thresholds = np.array(bins)
+        for i in range(len(thresholds)):
+            if type(thresholds[i]) == np.float64:
+                thresholds[i] = round(thresholds[i], DEFAULT_DECIMAL)
+
+        return np.sort(thresholds)
 
 
 def DTMerge(feature, target, nan = -1, n_bins = None, min_samples = 1):
@@ -156,6 +199,8 @@ def merge(feature, target = None, method = 'dt', return_splits = False, **kwargs
 
     if method == 'dt':
         splits = DTMerge(feature, target, **kwargs)
+    elif method == 'mono':
+        splits = MonoMerge(feature, target, **kwargs)
     elif method == 'quantile':
         splits = QuantileMerge(feature, **kwargs)
     elif method == 'step':
@@ -164,7 +209,6 @@ def merge(feature, target = None, method = 'dt', return_splits = False, **kwargs
         splits = KMeansMerge(feature, target=target, **kwargs)
     else:
         splits = np.empty(shape=(0,))
-
 
 
     if len(splits):

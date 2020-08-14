@@ -7,6 +7,8 @@ import re
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib
+from .utils.func import to_ndarray
+from .stats import probability
 
 from lapras.utils import count_point
 
@@ -99,14 +101,13 @@ def bin_plot(frame, col=None, target='target'):
     frame = frame.copy()
     group = frame.groupby(col)
     table = group[target].agg(['sum', 'count']).reset_index()
-    table['badrate'] = table['sum'] / table['count']
-    table['prop'] = table['count'] / table['count'].sum()
-    print(table)
-    # x = list(range(len(table['count'])))
-    plt_show(table.index, table[col], table['count'], table['badrate'], col)
+    table.columns = [col,'bad_count','count']
+    table['bad_rate'] = table['bad_count'] / table['count']
+
+    plt_show(table.index, table[col], table['count'], table['bad_rate'], col)
 
 
-def score_plot(frame, score='score', target='target',score_bond=[300,400, 430, 460, 490, 520, 550, 580, 610, 640, 670, 700, 730, 760, 790, 820, 850, 880, 999]):
+def score_plot(frame, score='score', target='target',score_bond=None):
     """plot for scores
 
     Args:
@@ -115,6 +116,12 @@ def score_plot(frame, score='score', target='target',score_bond=[300,400, 430, 4
         target (str): target column in frame
 
     """
+    if score_bond is None:
+        max_value = int(frame[score].max())+1
+        min_value = int(frame[score].min())
+        score_bond = np.arange(min_value,max_value,step=30)
+        score_bond[-1] = max_value
+
     # 计算 区间数量 区间坏账率
     x, ticks, y_count, y_rate = count_point(frame, score_bond, score, target)
 
@@ -157,7 +164,7 @@ def plt_show(x, ticks,y_count, y_rate, title=None):
     # 画柱子
     ax1 = fig.add_subplot(111)
     # alpha透明度， edgecolor边框颜色，color柱子颜色 linewidth width 配合去掉柱子间距
-    ax1.bar(x, y1, alpha=0.8, edgecolor='k', color='#836FFF',linewidth=1, width =1)
+    ax1.bar(x, y1, alpha=0.8, edgecolor='k', color='#3399FF',linewidth=1, width =1)
     # 获取 y 最大值 最高位 + 1 的数值 比如 201取300，320取400，1800取2000
     y1_lim = int(str(int(str(max(y1))[0]) + 1) + '0' * (len(str(max(y1))) - 1))
 
@@ -199,7 +206,7 @@ def plt_show(x, ticks,y_count, y_rate, title=None):
     plt.xticks(fontsize=15)
 
     # 是否显示网格
-    plt.grid(True)
+    plt.grid(False)
 
     # 保存图片 dpi为图像分辨率
     # plt.savefig('分数分布及区间坏账率.png', dpi=600, bbox_inches='tight')

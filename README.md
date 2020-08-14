@@ -7,7 +7,6 @@
 
 
 
-
 Lapras is developed to facilitate the dichotomy model development work.
 
 
@@ -33,7 +32,7 @@ import pandas as pd
 import lapras
 
 # read data file as pandas dataframe
-df = pd.read_csv('data/model_data.csv',encoding="utf-8")
+df = pd.read_csv('data/demo.csv',encoding="utf-8")
 to_drop = ['id']
 target = 'bad'
 
@@ -41,11 +40,11 @@ target = 'bad'
 lapras.detect(df.drop(to_drop,axis=1))
 lapras.quality(df.drop(to_drop,axis=1),target = target)
 train_selected, dropped = lapras.select(df.drop(to_drop,axis=1),target = target, empty = 0.9, \
-                                                iv = 0.02, corr = 0.7, return_drop=True, exclude=[])
+                                                iv = 0.02, corr = 0.7, vif=False, return_drop=True, exclude=[])
 
-# bins   method = ['dt', 'kmeans', 'step', 'quantile']                                    
+# bins   method = ['dt', 'kmeans', 'step', 'quantile', 'mono']                                    
 c = lapras.Combiner()
-c.fit(train_selected, y = target, method = 'dt', min_samples = 0.05,n_bins=8)
+c.fit(train_selected, y = target, method = 'mono', min_samples = 0.05,n_bins=8)
 c.export()
 # c.load({}) # export the default bins and change it as you wish, finally load it back and take effects.
 
@@ -54,6 +53,7 @@ c.export()
 cols = train_selected.columns
 for col in cols:
     if col != target:
+        print(lapras.bin_stats(c.transform(train_selected[[col, target]], labels=True), col=col, target=target))
         lapras.bin_plot(c.transform(train_selected[[col,target]], labels=True), col=col, target=target)
         
 # transfer to WOE
@@ -78,6 +78,8 @@ card.export()
 #  performance
 lapras.perform(final_data['prob'],final_data[target])
 lapras.score_plot(final_data,score='score', target=target)
+print(lapras.LIFT(final_data['prob'],final_data[target]))
+print(lapras.KS_bucket(final_data['score'], final_data[target], bucket=10, method = 'quantile'))
  
 
 ```
@@ -86,7 +88,7 @@ lapras.score_plot(final_data,score='score', target=target)
 
 A simple API.
 
-[pypi-image]: https://img.shields.io/badge/pypi-V0.0.14-%3Cgreen%3E
+[pypi-image]: https://img.shields.io/badge/pypi-V0.0.15-%3Cgreen%3E
 [pypi-url]: https://github.com/yhangang/lapras
 [python-image]: https://img.shields.io/pypi/pyversions/toad.svg?style=flat-square
 [docs-url]: https://github.com/yhangang/lapras
