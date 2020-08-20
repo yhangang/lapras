@@ -1420,7 +1420,7 @@ auto_card = lapras.auto_model(df=train_df,target=target,to_drop=to_drop,bins_sho
     
     自动化建模完成,耗时：0秒
     
-```
+
 
 ## Documents
 
@@ -1430,5 +1430,4 @@ A simple API.
 [pypi-url]: https://github.com/yhangang/lapras
 [python-image]: https://img.shields.io/pypi/pyversions/toad.svg?style=flat-square
 [docs-url]: https://github.com/yhangang/lapras
-
 
