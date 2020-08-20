@@ -25,7 +25,7 @@ via source code
 python setup.py install
 ```
 
-## Usage
+## Documents
 
 ```python
 import lapras
@@ -1422,9 +1422,7 @@ auto_card = lapras.auto_model(df=train_df,target=target,to_drop=to_drop,bins_sho
     
 
 
-## Documents
 
-A simple API.
 
 [pypi-image]: https://img.shields.io/badge/pypi-V0.0.15-%3Cgreen%3E
 [pypi-url]: https://github.com/yhangang/lapras
