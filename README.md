@@ -28,7 +28,6 @@ python setup.py install
 ## Usage
 
 ```python
-```python
 import lapras
 
 import pandas as pd
