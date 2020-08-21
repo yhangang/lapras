@@ -345,8 +345,10 @@ lapras.quality(train_df.drop(to_drop,axis=1),target = target)
 ```python
 # 计算特征间PSI
 # 参数详解：
-# test=None 测试特征
-# base = None 基础特征
+# actual=None 基础特征
+# predict=None 预测特征
+# bins=10 分箱数量
+# return_frame=False 是否返回PSI分箱详情
 cols = list(lapras.quality(train_df,target = target).reset_index()['index'])
 for col in cols:
     if col not in [target]:
