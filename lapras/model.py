@@ -113,10 +113,5 @@ def auto_model(df, target='target',to_drop=['id'], empty = 0.95, iv = 0.02, corr
     return card
 
 
-if __name__ == "__main__":
-    df = pd.read_csv('data/model_data_demo.csv', encoding="utf-8")
-    card = auto_model(df,target='bad',to_drop=['employee_no'],bins_show=False,perform_show=True,empty = 0.95,
-                      iv = 0.02, corr = 0.9, vif = False, method = 'mono', n_bins=8, min_samples=0.05,
-                      coef_negative = False)
-    print(card.export())
+
 

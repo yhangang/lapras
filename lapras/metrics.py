@@ -244,8 +244,40 @@ def _PSI(test, base):
     return psi, frame.reset_index()
 
 
+def PSI(actual, predict, bins=10, return_frame=False):
+    """
+    功能: 计算PSI值，并输出实际和预期占比分布曲线
+    :param actual: Array或series，代表真实数据，如训练集模型得分
+    :param predict: Array或series，代表预期数据，如测试集模型得分
+    :param bins: 分段数
+    :param return_frame: 是否返回PSI 分箱详情
+    :return:
+        psi: float，PSI值
+        psi_df:DataFrame
+    """
+    actual_min = actual.min()  # 实际中的最小概率
+    actual_max = actual.max()  # 实际中的最大概率
+    binlen = (actual_max - actual_min) / bins
+    cuts = [actual_min + i * binlen for i in range(1, bins)]#设定分组
+    cuts.insert(0, -float("inf"))
+    cuts.append(float("inf"))
+    actual_cuts = np.histogram(actual, bins=cuts)#将actual等宽分箱
+    predict_cuts = np.histogram(predict, bins=cuts)#将predict按actual的分组分箱
+    actual_df = pd.DataFrame(actual_cuts[0],columns=['actual'])
+    predict_df = pd.DataFrame(predict_cuts[0], columns=['predict'])
+    psi_df = pd.merge(actual_df,predict_df,right_index=True,left_index=True)
+    psi_df['actual_rate'] = (psi_df['actual'] + 1) / psi_df['actual'].sum()#计算占比，分子加1，防止计算PSI时分子分母为0
+    psi_df['predict_rate'] = (psi_df['predict'] + 1) / psi_df['predict'].sum()
+    psi_df['psi'] = (psi_df['actual_rate'] - psi_df['predict_rate']) * np.log(
+        psi_df['actual_rate'] / psi_df['predict_rate'])
+    psi = psi_df['psi'].sum()
+    if return_frame:
+        return psi, psi_df
+    else:
+        return psi
 
-def PSI(test, base, combiner = None, return_frame = False):
+
+def CAL_PSI(test, base, combiner = None, return_frame = False):
     """calculate PSI
 
     Args:
