@@ -11,26 +11,26 @@ Lapras is developed to facilitate the dichotomy model development work.
 
 ## Usage
 Lapras is designed to develop standard scorecard model. It contains the main steps as follows:  
-1、Exploratory Data Analysis  
+1.Exploratory Data Analysis  
 lapras.detect()  
 lapras.quality()  
 lapras.IV()  
 lapras.VIF()  
 
-2、Feature Selection  
+2.Feature Selection  
 lapras.select()  
 lapras.stepwise()  
 
-3、Binnings  
+3.Binnings  
 lapras.Combiner()  
 lapras.WOETransformer()  
 lapras.bin_stats()  
 lapras.bin_plot()  
 
-4、Modeling  
+4.Modeling  
 lapras.ScoreCard()  
 
-5、Performance Measure  
+5.Performance Measure  
 lapras.perform()  
 lapras.LIFT()  
 lapras.score_plot()  
