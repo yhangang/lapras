@@ -51,7 +51,7 @@ For detailed usage, please refer to the wiki. Enjoy.
 via pip
 
 ```bash
-pip install lapras
+pip install lapras --upgrade -i https://pypi.org/simple
 ```
 
 via source code
