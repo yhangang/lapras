@@ -20,9 +20,9 @@ iv_df = lapras.quality(df.drop(to_drop,axis=1),target = target)
 print(iv_df)
 print(iv_df.index)
 
-# train_selected, dropped = lapras.select(df.drop(to_drop,axis=1),target = target, empty = 0.99, \
-#                                                 iv = 0.02, corr = 1,vif = 10, return_drop=True, exclude=[])
-train_selected = df.drop(to_drop,axis=1)
+train_selected, dropped = lapras.select(df.drop(to_drop,axis=1),target = target, empty = 0.99, \
+                                                iv = 0.02, corr = 1,vif = 10, return_drop=True, exclude=[])
+# train_selected = df.drop(to_drop,axis=1)
 # print(dropped)
 # print(train_selected.shape)
 print(train_selected.columns)
@@ -52,7 +52,7 @@ cols = list(lapras.quality(train_selected,target = target).reset_index()['index'
 transfer = lapras.WOETransformer()
 train_woe = transfer.fit_transform(c.transform(train_selected), train_selected[target], exclude=[target])
 # print(train_woe)
-# print(lapras.metrics.PSI(df['C'], df['D']))
+print("PSI:%s" % lapras.PSI(df['age'], df['age']))
 
 # 将woe转化后的数据做逐步回归
 final_data = lapras.stepwise(train_woe,target = target, estimator='ols', direction = 'both', criterion = 'aic', exclude = [])
@@ -85,6 +85,12 @@ print(card.export())
 # lapras.score_plot(final_data,score='score', target=target)
 # print(lapras.LIFT(prob,final_data[target]))
 
-print(lapras.KS_bucket(final_data['score'], final_data[target], bucket=10, method = 'quantile'))
+# print(lapras.KS_bucket(final_data['score'], final_data[target], bucket=10, method = 'quantile'))
 
 
+# if __name__ == "__main__":
+#     df = pd.read_csv('data/model_data_demo.csv', encoding="utf-8")
+#     card = lapras.auto_model(df,target='bad',to_drop=['employee_no'],bins_show=False,perform_show=True,empty = 0.95,
+#                       iv = 0.02, corr = 0.9, vif = False, method = 'mono', n_bins=8, min_samples=0.05,
+#                       coef_negative = False)
+#     print(card.export())
