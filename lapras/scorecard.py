@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LogisticRegression
+import statsmodels.api as sma
+import statsmodels.formula.api as smf
 
 from .transform import WOETransformer, Combiner
 from .utils import to_ndarray, bin_by_splits, save_json, read_json
@@ -18,7 +20,7 @@ FACTOR_UNKNOWN = 'UNKNOWN'
 
 class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
     def __init__(self, pdo = 40, rate = 2, base_odds = 1/60, base_score = 600,
-        card = None, combiner = {}, transfer = None, **kwargs):
+        card = None, combiner = {}, transfer = None, solver='lbfgs', **kwargs):
         """
 
         Args:
@@ -27,6 +29,8 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
             transfer (toad.WOETransformer)
             # self.offset = 363.7244
             # self.factor = 57.7078
+            # self.solver = 57.7078
+            solver: lbfgs or ols
         """
         self.pdo = pdo
         self.rate = rate
@@ -38,7 +42,12 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
 
         self._combiner = combiner
         self.transfer = transfer
-        self.model = LogisticRegression(solver='lbfgs',**kwargs)
+        self.solver = solver
+
+        if self.solver == 'ols':
+            self.model = sma
+        else:
+            self.model = LogisticRegression(solver='lbfgs', **kwargs)
 
         self._feature_names = None
 
@@ -58,11 +67,17 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
     def coef_(self):
         """ coef of LR code
         """
-        return self.model.coef_[0]
+        if self.solver == 'ols':
+            return self.model.params[1:]
+        else:
+            return self.model.coef_[0]
     
     @property
     def intercept_(self):
-        return self.model.intercept_[0]
+        if self.solver == 'ols':
+            return self.model.params[0]
+        else:
+            return self.model.intercept_[0]
     
     @property
     def n_features_(self):
@@ -100,7 +115,13 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
             if f not in self.transfer:
                 raise Exception('column \'{f}\' is not in transfer'.format(f = f))
 
-        self.model.fit(X, y)
+        if self.solver == 'ols':
+            # 增加常数项,截距
+            X = sma.add_constant(X)
+            self.model = self.model.Logit(y, X).fit()
+            print(self.model.summary())
+        else:
+            self.model.fit(X, y)
 
         self.rules = self._generate_rules()
 
@@ -117,7 +138,12 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
             DataFrame: sub score for each feature
         """
 
-        prob = self.model.predict_proba(X)[:, 1]
+        if self.solver == 'ols':
+            X = sma.add_constant(X)
+            prob = self.model.predict(X)
+        else:
+            prob = self.model.predict_proba(X)[:, 1]
+
         result = self.proba_to_score(prob)
         result = np.around(result, decimals=2)
         return result
@@ -125,7 +151,11 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
 
     def predict_prob(self, X, **kwargs):
 
-        prob = self.model.predict_proba(X)[:, 1]
+        if self.solver == 'ols':
+            X = sma.add_constant(X)
+            prob = self.model.predict(X)
+        else:
+            prob = self.model.predict_proba(X)[:, 1]
         return prob
     
 

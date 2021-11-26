@@ -64,6 +64,7 @@ final_data = lapras.stepwise(train_woe,target = target, estimator='ols', directi
 card = lapras.ScoreCard(
     combiner = c,
     transfer = transfer,
+    solver='ols'
 )
 col = list(final_data.drop([target],axis=1).columns)
 # print(col)
@@ -73,9 +74,8 @@ score = card.predict(final_data[col])
 prob = card.predict_prob(final_data[col])
 final_data['score'] = score
 final_data['prob'] = prob
-# print(card.intercept_)
-print(card.coef_)
-print(min(card.coef_))
+# print("card.intercept_:" + str(card.intercept_))
+# print("card.coef_:" + str(card.coef_))
 # print(final_data[['score', 'prob']].iloc[:10,:])
 #输出标准评分卡
 print(card.export())
@@ -94,3 +94,5 @@ print(card.export())
 #                       iv = 0.02, corr = 0.9, vif = False, method = 'mono', n_bins=8, min_samples=0.05,
 #                       coef_negative = False)
 #     print(card.export())
+
+# lapras.radar_plot([0.1,0.2,0.3,0.8,0.5],title='is am are',radar_labels=['111','222','333','444','请问'])

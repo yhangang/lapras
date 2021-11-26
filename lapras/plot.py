@@ -7,6 +7,7 @@ import re
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.colors as mcolors
 from .utils.func import to_ndarray
 from .stats import probability
 
@@ -129,27 +130,28 @@ def score_plot(frame, score='score', target='target',score_bond=None):
     plt_show(x, ticks, y_count, y_rate)
 
 
-
-def plt_show(x, ticks,y_count, y_rate, title=None):
+def plt_show(x, ticks, y_count, y_rate, title="Score Distribute And Bad Rate", x_label="Score Bonds",
+             y_label_left="Sample Counts", y_label_right="Bad Rates", fontsize=15):
     '''
     画 柱状图 和 折线图
     :param x: 区间分段 1,2,3,4
     :param ticks: 区间名称['[300, 400)', '[400, 500)',  '[500, 1000)']
     :param y_count: 区间 数量， 表示评分在此区间内的样本数量
     :param y_rate: 区间 坏账率
+    :param title: 图表标题
+    :param x_label: 横坐标标题
+    :param y_label_left: 左边从坐标标题
+    :param y_label_right: 右边从坐标标题
+    :param fontsize: 字体大小
     '''
     # 设置字体、图形样式
     # sns.set_style("whitegrid")
-    matplotlib.rcParams['font.sans-serif'] = ['SimHei']
-    matplotlib.rcParams['font.family'] = 'sans-serif'
-    matplotlib.rcParams['axes.unicode_minus'] = False
-    matplotlib.fontsize='15'
+    # matplotlib.rcParams['font.sans-serif'] = ['SimHei']
+    # matplotlib.rcParams['font.family'] = 'sans-serif'
+    # matplotlib.rcParams['axes.unicode_minus'] = False
+    matplotlib.fontsize = fontsize
 
-    # 坐标轴名称
-    x_label = "Score Bonds"
-    y_label_left = "Sample Counts"
-    y_label_right = "Bad Rates"
-    graph_title = "Score Distribute And Bad Rate"
+
 
     # 是否显示折线图
     line_flag = True
@@ -178,10 +180,7 @@ def plt_show(x, ticks,y_count, y_rate, title=None):
         ax1.text(x_i, y_i + y1_lim/20, str(y_i), ha='center', va='top', fontsize=13, rotation=0)
 
     # 设置标题
-    if title != None:
-        ax1.set_title(title, fontsize='20')
-    else:
-        ax1.set_title(graph_title, fontsize='20')
+    ax1.set_title(title, fontsize='20')
     plt.yticks(fontsize=15)
     # plt.xticks(x, y)
     plt.xticks(fontsize=12)
@@ -212,3 +211,31 @@ def plt_show(x, ticks,y_count, y_rate, title=None):
     # plt.savefig('分数分布及区间坏账率.png', dpi=600, bbox_inches='tight')
     # 显示图片
     plt.show()
+
+
+def radar_plot(data=[], title='Radar Graph', radar_labels=['dimension1','dimension2','dimension3','dimension4', 'dimension5'],
+               figsize=(6,6), fontsize=15):
+    """
+
+    Args:
+        data: List of data
+        title: the name of the graph
+        radar_labels: the name of each dimension
+        figsize: figsize
+        fontsize: fontsize
+    Returns:
+
+    """
+    angles = np.linspace(0, 2*np.pi, len(radar_labels), endpoint=False)
+    fig = plt.figure(figsize=figsize,facecolor = "white")
+    plt.subplot(111, polar = True)
+    plt.ylim(0,1)
+    plt.plot(angles, data,'o-',linewidth=1, alpha=0.2)
+    plt.fill(angles, data, alpha=0.25)
+    plt.thetagrids(angles*180/np.pi, radar_labels,fontsize=fontsize)
+    plt.figtext(0.52, 0.95,title , ha='center', size=25)
+    # plt.setp(legend.get_texts(), fontsize='large')
+    plt.grid(True)
+    # plt.savefig('holland_radar.jpg')
+    plt.show()
+

@@ -7,7 +7,7 @@ filepath = 'README.md'
 
 setup(
     name='lapras',
-    version='0.0.17',
+    version='0.0.18',
     packages = find_packages(),
 
     description='scorecard',
@@ -24,6 +24,7 @@ setup(
     #     'scipy >= 1.3.2',
     #     'scikit-learn >= 0.20.2, <=0.22.2',
     #     'seaborn >= 0.10.1',
+    #     'statsmodels >= 0.13.1'
     #
     # ],
     classifiers=[
@@ -34,6 +35,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     package_data = {
         # If any package contains *.txt or *.rst files, include them:
