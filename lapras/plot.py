@@ -90,7 +90,7 @@ def show_mutil(model_name):
         show_singe_param_pic(params_data_dict, param)
         i += 1
 
-def bin_plot(frame, col=None, target='target'):
+def bin_plot(frame, col=None, target='target', **kwargs):
     """plot for bins
 
     Args:
@@ -105,10 +105,10 @@ def bin_plot(frame, col=None, target='target'):
     table.columns = [col,'bad_count','count']
     table['bad_rate'] = table['bad_count'] / table['count']
 
-    plt_show(table.index, table[col], table['count'], table['bad_rate'], col)
+    plt_show(table.index, table[col], table['count'], table['bad_rate'], title=col, **kwargs)
 
 
-def score_plot(frame, score='score', target='target',score_bond=None):
+def score_plot(frame, score='score', target='target',score_bond=None, **kwargs):
     """plot for scores
 
     Args:
@@ -127,7 +127,7 @@ def score_plot(frame, score='score', target='target',score_bond=None):
     x, ticks, y_count, y_rate = count_point(frame, score_bond, score, target)
 
     # 画图显示 区间数量 区间坏账率
-    plt_show(x, ticks, y_count, y_rate)
+    plt_show(x, ticks, y_count, y_rate, **kwargs)
 
 
 def plt_show(x, ticks, y_count, y_rate, title="Score Distribute And Bad Rate", x_label="Score Bonds",
@@ -138,7 +138,7 @@ def plt_show(x, ticks, y_count, y_rate, title="Score Distribute And Bad Rate", x
     :param ticks: 区间名称['[300, 400)', '[400, 500)',  '[500, 1000)']
     :param y_count: 区间 数量， 表示评分在此区间内的样本数量
     :param y_rate: 区间 坏账率
-    :param title: 图表标题
+    :param graph_title: 图表标题
     :param x_label: 横坐标标题
     :param y_label_left: 左边从坐标标题
     :param y_label_right: 右边从坐标标题

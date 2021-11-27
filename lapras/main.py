@@ -41,7 +41,7 @@ print(c.export())
 
 # print(c.transform(train_selected, labels=True).iloc[0:10, :])
 
-cols = list(lapras.quality(train_selected,target = target).reset_index()['index'])
+# cols = list(lapras.quality(train_selected,target = target).reset_index()['index'])
 # for col in cols:
 #     if col != target:
 #         print(lapras.bin_stats(c.transform(train_selected[[col, target]], labels=True), col=col, target=target))
@@ -63,8 +63,7 @@ final_data = lapras.stepwise(train_woe,target = target, estimator='ols', directi
 
 card = lapras.ScoreCard(
     combiner = c,
-    transfer = transfer,
-    solver='ols'
+    transfer = transfer
 )
 col = list(final_data.drop([target],axis=1).columns)
 # print(col)
@@ -89,10 +88,11 @@ print(card.export())
 
 
 # if __name__ == "__main__":
-#     df = pd.read_csv('data/model_data_demo.csv', encoding="utf-8")
+#     df = pd.read_csv('data/model_data_demo.csv', encoding="utf")
 #     card = lapras.auto_model(df,target='bad',to_drop=['employee_no'],bins_show=False,perform_show=True,empty = 0.95,
 #                       iv = 0.02, corr = 0.9, vif = False, method = 'mono', n_bins=8, min_samples=0.05,
 #                       coef_negative = False)
 #     print(card.export())
 
 # lapras.radar_plot([0.1,0.2,0.3,0.8,0.5],title='is am are',radar_labels=['111','222','333','444','请问'])
+
