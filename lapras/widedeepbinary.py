@@ -14,7 +14,7 @@ import tensorflow as tf
 class WideDeepBinary():
     def __init__(self, static_continue_X_cols:list, static_discrete_X_cols:list, rnn_continue_X_cols:list, ts_step:int,
                  embedding=(1000, 8), discrete_cells=20, rnn_cells=64, hidden_units=[64,16], activation='swish',
-                 dropout=0.3, network_reinforce=False, **kwargs):
+                 dropout=0.3, network_reinforce=False):
         """
         Column names doesn't matter, but you should know what are you modeling.
         Args:
@@ -31,10 +31,18 @@ class WideDeepBinary():
             network_reinforce: 是否使用网络增强
 
         """
-        self.ts_step = ts_step
+
         self.static_continue_X_cols = static_continue_X_cols
         self.static_discrete_X_cols = static_discrete_X_cols
         self.rnn_continue_X_cols = rnn_continue_X_cols
+        self.ts_step = ts_step
+        self.embedding = embedding
+        self.discrete_cells = discrete_cells
+        self.rnn_cells = rnn_cells
+        self.hidden_units = hidden_units
+        self.activation = activation
+        self.dropout = dropout
+        self.network_reinforce = network_reinforce
 
         input1 = tf.keras.layers.Input(shape=len(static_continue_X_cols)) # 连续静态数据
         input2 = tf.keras.layers.Input(shape=len(static_discrete_X_cols)) # 离散静态数据
@@ -43,10 +51,10 @@ class WideDeepBinary():
         x1 = tf.keras.layers.BatchNormalization()(input1)
 
         x2 = tf.keras.layers.Embedding(embedding[0], embedding[1])(input2)
-        x2 = tf.keras.layers.GRU(discrete_cells)(x2)
+        x2 = tf.keras.layers.GRU(discrete_cells, recurrent_initializer='glorot_uniform')(x2)
 
         x3 = tf.keras.layers.BatchNormalization()(input3)
-        x3 = tf.keras.layers.LSTM(units=rnn_cells)(x3)
+        x3 = tf.keras.layers.LSTM(units=rnn_cells, recurrent_initializer='glorot_uniform')(x3)
 
         x = tf.keras.layers.concatenate([x1, x2, x3], axis=1)
 
@@ -88,9 +96,10 @@ class WideDeepBinary():
             self.model = tf.keras.models.Model(inputs=[input1, input2, input3], outputs=output)
 
     def compile(self, loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(1e-4),
-                      metrics=[Precision(), AUC()], **kwargs):
+                      metrics=[Precision(), AUC()], summary=True, **kwargs):
         self.model.compile(loss=loss, optimizer=optimizer, metrics=metrics, **kwargs)
-        self.model.summary()
+        if summary:
+            self.model.summary()
 
     def pre_processing(self, basic_df:pd.DataFrame, rnn_df:pd.DataFrame, id_label:str, ts_label:str, training=True,
                        y_label='y', test_size=0.2, fill_na=0, **kwargs):
@@ -173,30 +182,45 @@ class WideDeepBinary():
             static_discrete_X_train = np.array(train_basic_df[self.static_discrete_X_cols])
             rnn_continue_X_train = self._create_dataset(train_rnn_df[self.rnn_continue_X_cols], self.ts_step)
 
-            return [static_continue_X_train, static_discrete_X_train, rnn_continue_X_train]
+            return [static_continue_X_train, static_discrete_X_train, rnn_continue_X_train], train_basic_df[[id_label]]
 
     def fit(self, X, y, X_test=None, y_test=None, epochs=10,batch_size=256,validation_split=0,**kwargs):
+        network_reinforce = self.network_reinforce
         class AUC_KS(Callback):
             def on_epoch_end(self, epoch, logs=None):
                 print()
                 predictions = self.model.predict(X)
-                auc_score = roc_auc_score(y[1], predictions[1])
-                fpr, tpr, _ = roc_curve(y[1], predictions[1])
+                if network_reinforce:
+                    predict = predictions[1]
+                else:
+                    predict = predictions
+                auc_score = roc_auc_score(y, predict)
+                fpr, tpr, _ = roc_curve(y, predict)
                 ks = np.max(np.abs(tpr - fpr))
                 print(' train_auc {:4f} train_ks {:4f}'.format(auc_score, ks))
 
                 if X_test is not None and y_test is not None:
                     predictions = self.model.predict(X_test)
-                    auc_score = roc_auc_score(y_test[1], predictions[1])
-                    fpr, tpr, _ = roc_curve(y_test[1], predictions[1])
+                    if network_reinforce:
+                        predict = predictions[1]
+                    else:
+                        predict = predictions
+                    auc_score = roc_auc_score(y_test, predict)
+                    fpr, tpr, _ = roc_curve(y_test, predict)
                     ks = np.max(np.abs(tpr - fpr))
                     print(' test_auc {:4f} test_ks {:4f}'.format(auc_score, ks))
 
-        self.model.fit(X,y, epochs=epochs,batch_size=batch_size,validation_split=validation_split,
+        if self.network_reinforce:
+            y = [y,y]
+        self.model.fit(X, y, epochs=epochs, batch_size=batch_size, validation_split=validation_split,
                        callbacks=[AUC_KS()], **kwargs)
 
     def predict(self, x, **kwargs):
-        return self.model.predict(x, **kwargs)
+        predictions = self.model.predict(x, **kwargs)
+        if self.network_reinforce:
+            return predictions[1]
+        else:
+            return predictions
 
     def _create_dataset(self, X, ts_step=1):
         """
@@ -208,4 +232,26 @@ class WideDeepBinary():
             Xs.append(v)
 
         return np.array(Xs)
+
+    def get_params(self):
+        params_dict = {'static_continue_X_cols': self.static_continue_X_cols,
+                       'static_discrete_X_cols': self.static_discrete_X_cols,
+                       'rnn_continue_X_cols': self.rnn_continue_X_cols, 'ts_step': self.ts_step,
+                       'embedding': self.embedding, 'discrete_cells': self.discrete_cells, 'rnn_cells': self.rnn_cells,
+                       'hidden_units': self.hidden_units, 'activation': self.activation, 'dropout': self.dropout,
+                       'network_reinforce': self.network_reinforce}
+        return params_dict
+
+    def _load_params(self, params_dict: dict):
+        self.static_continue_X_cols = params_dict['static_continue_X_cols']
+        self.static_discrete_X_cols = params_dict['static_discrete_X_cols']
+        self.rnn_continue_X_cols = params_dict['rnn_continue_X_cols']
+        self.ts_step = params_dict['ts_step']
+        self.embedding = params_dict['embedding']
+        self.discrete_cells = params_dict['discrete_cells']
+        self.rnn_cells = params_dict['rnn_cells']
+        self.hidden_units = params_dict['hidden_units']
+        self.activation = params_dict['activation']
+        self.dropout = params_dict['dropout']
+        self.network_reinforce = params_dict['network_reinforce']
 

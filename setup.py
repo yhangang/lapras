@@ -24,9 +24,9 @@ setup(
     #     'scipy >= 1.3.2',
     #     'scikit-learn >= 0.20.2, <=0.22.2',
     #     'seaborn >= 0.10.1',
-    #     'statsmodels >= 0.13.1'
-    #     'tensorflow >= 2.2.0, <=2.5.0'
-    #
+    #     'statsmodels >= 0.13.1',
+    #     'tensorflow >= 2.2.0, <=2.5.0',
+    #     'hyperopt >= 0.2.7'
     # ],
     classifiers=[
         'Operating System :: POSIX',
