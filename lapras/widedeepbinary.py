@@ -1,6 +1,7 @@
 import math
 import os
 
+import lapras
 import numpy as np
 import pandas as pd
 from sklearn import model_selection
@@ -9,12 +10,13 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import roc_auc_score, roc_curve
 from tensorflow.python.keras.callbacks import Callback
 import tensorflow as tf
+from hyperopt import fmin, tpe, hp
+import hyperopt
 
 
 class WideDeepBinary():
-    def __init__(self, static_continue_X_cols:list, static_discrete_X_cols:list, rnn_continue_X_cols:list, ts_step:int,
-                 embedding=(1000, 8), discrete_cells=20, rnn_cells=64, hidden_units=[64,16], activation='swish',
-                 dropout=0.3, network_reinforce=False):
+    def __init__(self, static_continue_X_cols:list, static_discrete_X_cols:list, rnn_continue_X_cols:list, ts_step: int,
+                 network_reinforce=False):
         """
         Column names doesn't matter, but you should know what are you modeling.
         Args:
@@ -22,31 +24,43 @@ class WideDeepBinary():
             static_discrete_X_cols: 静态离散特征列名
             rnn_continue_X_cols: 时序连续特征列名
             ts_step: 时间序列步长
-            embedding: 静态离散特征embedding参数,embedding[0]表示输入值离散空间上限,embedding[1]表示输出向量维度
-            discrete_cells: 静态离散数据输出神经元个数
-            rnn_cells: 时序连续特征输出神经元个数
-            hidden_units： MLP层神经元参数，最少2层
-            activation: MLP层激活函数
-            dropout: dropout系数
-            network_reinforce: 是否使用网络增强
 
         """
-
         self.static_continue_X_cols = static_continue_X_cols
         self.static_discrete_X_cols = static_discrete_X_cols
         self.rnn_continue_X_cols = rnn_continue_X_cols
         self.ts_step = ts_step
+        self.network_reinforce = network_reinforce
+        self.embedding = self.discrete_cells = self.rnn_cells = self.activation = self.dropout = \
+            self.hidden_units = self.model = None
+        self.le_dict = {}
+
+    def compile(self, embedding=(1000, 8), discrete_cells=20, rnn_cells=64, hidden_units=[64,16], activation='swish',
+                 dropout=0.3, loss=tf.keras.losses.BinaryCrossentropy(),
+                optimizer=tf.keras.optimizers.Adam(1e-4),  metrics=[Precision(), AUC()], summary=True, **kwargs):
+        """
+                Args:
+                    embedding: 静态离散特征embedding参数,embedding[0]表示输入值离散空间上限,embedding[1]表示输出向量维度
+                    discrete_cells: 静态离散数据输出神经元个数
+                    rnn_cells: 时序连续特征输出神经元个数
+                    hidden_units： MLP层神经元参数，最少2层
+                    activation: MLP层激活函数
+                    dropout: dropout系数
+                    loss: 损失函数
+                    optimizer: 优化器
+                    metrics: 效果度量函数
+                    summary: 是否输出summary信息
+                """
         self.embedding = embedding
         self.discrete_cells = discrete_cells
         self.rnn_cells = rnn_cells
         self.hidden_units = hidden_units
         self.activation = activation
         self.dropout = dropout
-        self.network_reinforce = network_reinforce
 
-        input1 = tf.keras.layers.Input(shape=len(static_continue_X_cols)) # 连续静态数据
-        input2 = tf.keras.layers.Input(shape=len(static_discrete_X_cols)) # 离散静态数据
-        input3 = tf.keras.layers.Input(shape=(ts_step,len(rnn_continue_X_cols))) # 连续时间序列数据
+        input1 = tf.keras.layers.Input(shape=len(self.static_continue_X_cols))  # 连续静态数据
+        input2 = tf.keras.layers.Input(shape=len(self.static_discrete_X_cols))  # 离散静态数据
+        input3 = tf.keras.layers.Input(shape=(self.ts_step, len(self.rnn_continue_X_cols)))  # 连续时间序列数据
 
         x1 = tf.keras.layers.BatchNormalization()(input1)
 
@@ -60,7 +74,7 @@ class WideDeepBinary():
 
         #######################################################################
         # 网络增强
-        if network_reinforce:
+        if self.network_reinforce:
             x0 = tf.keras.layers.BatchNormalization()(x)
             encoder = tf.keras.layers.GaussianNoise(dropout)(x0)
             encoder = tf.keras.layers.Dense(hidden_units[0])(encoder)
@@ -68,7 +82,8 @@ class WideDeepBinary():
             encoder = tf.keras.layers.Activation('swish')(encoder)
 
             decoder = tf.keras.layers.Dropout(dropout)(encoder)
-            decoder = tf.keras.layers.Dense(len(static_continue_X_cols)+discrete_cells+rnn_cells, name='decoder')(decoder)
+            decoder = tf.keras.layers.Dense(len(self.static_continue_X_cols) + discrete_cells + rnn_cells,
+                                            name='decoder')(decoder)
 
             x_ae = tf.keras.layers.Dense(hidden_units[1])(decoder)
             x_ae = tf.keras.layers.BatchNormalization()(x_ae)
@@ -90,13 +105,11 @@ class WideDeepBinary():
 
         output = tf.keras.layers.Dense(1, activation='sigmoid', name='action')(x)
 
-        if network_reinforce:
+        if self.network_reinforce:
             self.model = tf.keras.models.Model(inputs=[input1, input2, input3], outputs=[out_ae, output])
         else:
             self.model = tf.keras.models.Model(inputs=[input1, input2, input3], outputs=output)
 
-    def compile(self, loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(1e-4),
-                      metrics=[Precision(), AUC()], summary=True, **kwargs):
         self.model.compile(loss=loss, optimizer=optimizer, metrics=metrics, **kwargs)
         if summary:
             self.model.summary()
@@ -147,6 +160,20 @@ class WideDeepBinary():
             train_rnn_df = rnn_df[rnn_df[id_label].isin(train_id[id_label])]
             test_rnn_df = rnn_df[rnn_df[id_label].isin(test_id[id_label])]
 
+            # 对离散特征进行LabelEncoder编码
+            category_X_train = pd.DataFrame()
+            category_X_test = pd.DataFrame()
+            for col in self.static_discrete_X_cols:
+                le = LabelEncoder()
+                le.fit(train_basic_df[col])
+
+                test_basic_col_tmp = test_basic_df[col].map(lambda s: -99 if s not in le.classes_ else s)
+                le.classes_ = np.append(le.classes_, -99)
+
+                category_X_train = pd.concat([category_X_train, pd.Series(le.transform(train_basic_df[col]))], axis=1)
+                category_X_test = pd.concat([category_X_test, pd.Series(le.transform(test_basic_col_tmp))], axis=1)
+                self.le_dict[col] = le
+
             # 排序
             train_basic_df = train_basic_df.sort_values(id_label)
             test_basic_df = test_basic_df.sort_values(id_label)
@@ -161,8 +188,8 @@ class WideDeepBinary():
             static_continue_X_train = np.array(train_basic_df[self.static_continue_X_cols])
             static_continue_X_test = np.array(test_basic_df[self.static_continue_X_cols])
 
-            static_discrete_X_train = np.array(train_basic_df[self.static_discrete_X_cols])
-            static_discrete_X_test = np.array(test_basic_df[self.static_discrete_X_cols])
+            static_discrete_X_train = np.array(category_X_train)
+            static_discrete_X_test = np.array(category_X_test)
 
             rnn_continue_X_train = self._create_dataset(train_rnn_df[self.rnn_continue_X_cols], self.ts_step)
             rnn_continue_X_test = self._create_dataset(test_rnn_df[self.rnn_continue_X_cols], self.ts_step)
@@ -171,52 +198,83 @@ class WideDeepBinary():
                     [static_continue_X_test, static_discrete_X_test, rnn_continue_X_test], y_test
 
         else:
-            train_basic_df = basic_df
-            train_rnn_df = rnn_df
+            all_basic_df = basic_df
+            all_rnn_df = rnn_df
 
-            train_basic_df = train_basic_df.sort_values(id_label)
-            train_rnn_df = train_rnn_df.sort_values([id_label, ts_label])
+            # 对离散特征进行LabelEncoder编码
+            if self.static_discrete_X_cols and not self.le_dict:
+                print("请首先生成训练集样本，LabelEncoder还未初始化！")
+                return
+            category_X_all = pd.DataFrame()
+            for col in self.static_discrete_X_cols:
+                le = self.le_dict[col]
+                test_basic_col_tmp = all_basic_df[col].map(lambda s: -99 if s not in le.classes_ else s)
+                category_X_all = pd.concat([category_X_all, pd.Series(le.transform(test_basic_col_tmp))], axis=1)
+
+            all_basic_df = all_basic_df.sort_values(id_label)
+            all_rnn_df = all_rnn_df.sort_values([id_label, ts_label])
 
             # 按特征类型构造入模向量X
-            static_continue_X_train = np.array(train_basic_df[self.static_continue_X_cols])
-            static_discrete_X_train = np.array(train_basic_df[self.static_discrete_X_cols])
-            rnn_continue_X_train = self._create_dataset(train_rnn_df[self.rnn_continue_X_cols], self.ts_step)
+            static_continue_X_train = np.array(all_basic_df[self.static_continue_X_cols])
+            static_discrete_X_train = np.array(all_basic_df[self.static_discrete_X_cols])
+            rnn_continue_X_train = self._create_dataset(all_rnn_df[self.rnn_continue_X_cols], self.ts_step)
 
-            return [static_continue_X_train, static_discrete_X_train, rnn_continue_X_train], train_basic_df[[id_label]]
+            return [static_continue_X_train, static_discrete_X_train, rnn_continue_X_train], all_basic_df[[id_label]]
 
-    def fit(self, X, y, X_test=None, y_test=None, epochs=10,batch_size=256,validation_split=0,**kwargs):
+    def fit(self, X, y, X_test=None, y_test=None, epochs=10, batch_size=256, validation_split=0, callback=True,
+            **kwargs):
+        """
+            通过贝叶斯调参寻找最优参数
+            Args:
+                X: 训练集X数据集
+                y: 训练集y数据集
+                X_test: 测试集X数据集
+                y_test: 测试集y数据集
+                epochs: 指定epochs
+                batch_size: 指定batch_size
+                validation_split: 验证集比例
+                callback: epoch结束后是否调用回调函数，计算模型效果指标
+            """
         network_reinforce = self.network_reinforce
+
         class AUC_KS(Callback):
             def on_epoch_end(self, epoch, logs=None):
                 print()
                 predictions = self.model.predict(X)
                 if network_reinforce:
-                    predict = predictions[1]
+                    predictions = predictions[1]
+                    label = y[1]
                 else:
-                    predict = predictions
-                auc_score = roc_auc_score(y, predict)
-                fpr, tpr, _ = roc_curve(y, predict)
+                    label = y
+                auc_score = roc_auc_score(label, predictions)
+                fpr, tpr, _ = roc_curve(label, predictions)
                 ks = np.max(np.abs(tpr - fpr))
                 print(' train_auc {:4f} train_ks {:4f}'.format(auc_score, ks))
 
                 if X_test is not None and y_test is not None:
                     predictions = self.model.predict(X_test)
                     if network_reinforce:
-                        predict = predictions[1]
+                        predictions = predictions[1]
+                        label = y_test[1]
                     else:
-                        predict = predictions
-                    auc_score = roc_auc_score(y_test, predict)
-                    fpr, tpr, _ = roc_curve(y_test, predict)
+                        label = y_test
+                    auc_score = roc_auc_score(label, predictions)
+                    fpr, tpr, _ = roc_curve(label, predictions)
                     ks = np.max(np.abs(tpr - fpr))
                     print(' test_auc {:4f} test_ks {:4f}'.format(auc_score, ks))
 
         if self.network_reinforce:
-            y = [y,y]
+            y = [y, y]
+            y_test = [y_test, y_test]
+        if callback:
+            metrit = [AUC_KS()]
+        else:
+            metrit = []
         self.model.fit(X, y, epochs=epochs, batch_size=batch_size, validation_split=validation_split,
-                       callbacks=[AUC_KS()], **kwargs)
+                       callbacks=metrit, **kwargs)
 
-    def predict(self, x, **kwargs):
-        predictions = self.model.predict(x, **kwargs)
+    def predict(self, X, **kwargs):
+        predictions = self.model.predict(X, **kwargs)
         if self.network_reinforce:
             return predictions[1]
         else:
@@ -255,3 +313,106 @@ class WideDeepBinary():
         self.dropout = params_dict['dropout']
         self.network_reinforce = params_dict['network_reinforce']
 
+    def param_optimize(self, X, y, X_test, y_test, embedding_output_dim=(10, 30), discrete_cells=[8, 16, 32, 64],
+                        rnn_cells=[64, 128, 256, 512], hidden_units_layers=(2, 4),
+                        hidden_units_cells1=([64, 128, 256, 512]),
+                        hidden_units_cells2=([16, 32, 64, 128]),
+                        hidden_units_cells3=([4, 8, 16, 32]),
+                        hidden_units_cells4=([2, 4, 8]),
+                        activation=['swish', 'tanh', 'sigmoid', 'relu'], dropout=(0.1, 0.8),
+                        embedding_input_dim=1000, epochs=10, batch_size=256, max_evals=100):
+        """
+        通过贝叶斯调参寻找最优参数
+        Args:
+            X: 训练集X数据集
+            y: 训练集y数据集
+            X_test: 测试集X数据集
+            y_test: 测试集y数据集
+            embedding_output_dim: 离散数据embedding层输出维度，tuple类型,表示最小最大整数范围
+            discrete_cells: 离散数据最终输出层神经元个数，list类型,指定枚举值
+            rnn_cells: 序列数据最终输出层神经元个数，list类型,指定枚举值
+            hidden_units_layers: MLP层的层数,最多支持4层
+            hidden_units_cells[i]: MLP每层神经元数
+            activation: 激活函数枚举值
+            dropout: dropout的调参范围，必须是0-1之间的实数
+            #######以下非调优参数#######
+            embedding_input_dim: 指定embedding_input_dim，该参数无需调优
+            epochs: 指定epochs，不对该参数进行调优
+            batch_size: 指定batch_size，不对该参数进行调优
+            max_evals: 优化器最大迭代次数
+        """
+        # space = {
+        #     'x': hp.uniform('x', 0, 1),  # 0-1的均匀分布
+        #     'y': hp.normal('y', 0, 1),  # 0-1正态分布
+        #     'name': hp.choice('name', ['alice', 'bob']), }  # 枚举值
+
+        # 根据入参构造待调优参数列表
+        space = {
+            'embedding_output_dim': hp.choice('embedding_output_dim', list(range(embedding_output_dim[0],
+                                                                                 embedding_output_dim[1]+1))),
+            'discrete_cells': hp.choice('discrete_cells', discrete_cells),
+            'rnn_cells': hp.choice('rnn_cells', rnn_cells),
+            'activation': hp.choice('activation', activation),
+            'dropout': hp.uniform('dropout', dropout[0], dropout[1]),  # 0-1的均匀分布
+            'hidden_units_cells1': hp.choice('hidden_units_cells1', hidden_units_cells1),
+            'hidden_units_cells2': hp.choice('hidden_units_cells2', hidden_units_cells2),
+            'hidden_units_cells3': hp.choice('hidden_units_cells3', hidden_units_cells3),
+            'hidden_units_cells4': hp.choice('hidden_units_cells4', hidden_units_cells4),
+            'hidden_units_layers': hp.choice('hidden_units_layers', list(range(hidden_units_layers[0],
+                                                                               hidden_units_layers[1]+1))),
+        }
+
+        # define an objective function
+        def objective(args):
+            print("开始优化迭代，本次参数为：")
+            print(args)
+
+            hidden_units_layers = []
+            for i in range(1, args['hidden_units_layers']+1):
+                hidden_units_layers.append(args['hidden_units_cells'+str(i)])
+
+            self.compile(embedding=(embedding_input_dim, args['embedding_output_dim']),
+                         discrete_cells=args['discrete_cells'], rnn_cells=args['rnn_cells'],
+                         activation=args['activation'], dropout=args['dropout'], hidden_units=hidden_units_layers,
+                         summary=False)
+
+            self.fit(X, y, epochs=epochs, batch_size=batch_size, verbose=0, callback=False)
+            result = self.predict(X_test)
+            auc = lapras.AUC(result.reshape(-1,), y_test.reshape(-1,))
+            print("本次验证集AUC值为：" + str(auc))
+            print("===================================================================")
+
+            return -auc  # 优化目标AUC最大，也就是-AUC最小
+
+        # minimize the objective over the space
+        best = fmin(
+            fn=objective,
+            space=space,
+            algo=tpe.suggest,
+            max_evals=max_evals
+        )
+
+        best_params = hyperopt.space_eval(space, best)
+        print("优化完成，最优参数为：" + str(best_params))
+        print("\n")
+        print("开始按照最优参数重新训练模型……")
+
+        hidden_units_layers = []
+        for i in range(1, best_params['hidden_units_layers'] + 1):
+            hidden_units_layers.append(best_params['hidden_units_cells' + str(i)])
+
+        self.compile(embedding=(embedding_input_dim, best_params['embedding_output_dim']),
+                     discrete_cells=best_params['discrete_cells'], rnn_cells=best_params['rnn_cells'],
+                     activation=best_params['activation'], dropout=best_params['dropout'], hidden_units=hidden_units_layers,
+                     summary=False)
+
+        self.fit(X, y, X_test, y_test, epochs=epochs, batch_size=batch_size, verbose=0)
+        print("模型已按照最优参数重新训练，可直接使用")
+
+        return best_params
+
+    def save(self, path):
+        pass
+
+    def load(self, path):
+        pass
