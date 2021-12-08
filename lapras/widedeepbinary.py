@@ -6,12 +6,13 @@ import numpy as np
 import pandas as pd
 from sklearn import model_selection
 from tensorflow.python.keras.metrics import AUC, Precision
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import roc_auc_score, roc_curve
 from tensorflow.python.keras.callbacks import Callback
 import tensorflow as tf
 from hyperopt import fmin, tpe, hp
 import hyperopt
+import pickle
 
 
 class WideDeepBinary():
@@ -62,10 +63,24 @@ class WideDeepBinary():
         input2 = tf.keras.layers.Input(shape=len(self.static_discrete_X_cols))  # 离散静态数据
         input3 = tf.keras.layers.Input(shape=(self.ts_step, len(self.rnn_continue_X_cols)))  # 连续时间序列数据
 
-        x1 = tf.keras.layers.BatchNormalization()(input1)
+        # 静态连续特征不为空时
+        if self.static_continue_X_cols:
+            x1 = tf.keras.layers.BatchNormalization()(input1)
+        else:
+            x1 = input1
 
-        x2 = tf.keras.layers.Embedding(embedding[0], embedding[1])(input2)
-        x2 = tf.keras.layers.GRU(discrete_cells, recurrent_initializer='glorot_uniform')(x2)
+        # 根据实际类别数调整embedding_input_dim
+        if self.static_discrete_X_cols:
+            embedding_input_dim = embedding[0]
+            if self.le_dict:
+                embedding_input_dim = 0
+                for key in self.le_dict.keys():
+                    embedding_input_dim = max(embedding_input_dim, len(self.le_dict[key].classes_))
+                embedding_input_dim += 1
+            x2 = tf.keras.layers.Embedding(embedding_input_dim, embedding[1])(input2)
+            x2 = tf.keras.layers.GRU(discrete_cells, recurrent_initializer='glorot_uniform')(x2)
+        else:
+            x2 = input2
 
         x3 = tf.keras.layers.BatchNormalization()(input3)
         x3 = tf.keras.layers.LSTM(units=rnn_cells, recurrent_initializer='glorot_uniform')(x3)
@@ -161,8 +176,8 @@ class WideDeepBinary():
             test_rnn_df = rnn_df[rnn_df[id_label].isin(test_id[id_label])]
 
             # 对离散特征进行LabelEncoder编码
-            category_X_train = pd.DataFrame()
-            category_X_test = pd.DataFrame()
+            category_X_train = train_basic_df[[]]
+            category_X_test = test_basic_df[[]]
             for col in self.static_discrete_X_cols:
                 le = LabelEncoder()
                 le.fit(train_basic_df[col])
@@ -280,16 +295,22 @@ class WideDeepBinary():
         else:
             return predictions
 
+    # def _create_dataset2(self, X, ts_step=1):
+    #     """
+    #     将二维时间序列数据reshape成三维
+    #     """
+    #     Xs= []
+    #     for i in range(0, len(X), ts_step):
+    #         v = X.iloc[i:(i + ts_step)].values
+    #         Xs.append(v)
+    #     return np.array(Xs)
+
     def _create_dataset(self, X, ts_step=1):
         """
         将二维时间序列数据reshape成三维
         """
-        Xs= []
-        for i in range(0, len(X), ts_step):
-            v = X.iloc[i:(i + ts_step)].values
-            Xs.append(v)
-
-        return np.array(Xs)
+        n = int(X.shape[0] / ts_step)
+        return X.values.reshape(n, ts_step, X.shape[1])
 
     def get_params(self):
         params_dict = {'static_continue_X_cols': self.static_continue_X_cols,
@@ -297,7 +318,7 @@ class WideDeepBinary():
                        'rnn_continue_X_cols': self.rnn_continue_X_cols, 'ts_step': self.ts_step,
                        'embedding': self.embedding, 'discrete_cells': self.discrete_cells, 'rnn_cells': self.rnn_cells,
                        'hidden_units': self.hidden_units, 'activation': self.activation, 'dropout': self.dropout,
-                       'network_reinforce': self.network_reinforce}
+                       'network_reinforce': self.network_reinforce, 'le_dict': self.le_dict}
         return params_dict
 
     def _load_params(self, params_dict: dict):
@@ -312,6 +333,7 @@ class WideDeepBinary():
         self.activation = params_dict['activation']
         self.dropout = params_dict['dropout']
         self.network_reinforce = params_dict['network_reinforce']
+        self.le_dict = params_dict['le_dict']
 
     def param_optimize(self, X, y, X_test, y_test, embedding_output_dim=(10, 30), discrete_cells=[8, 16, 32, 64],
                         rnn_cells=[64, 128, 256, 512], hidden_units_layers=(2, 4),
@@ -411,8 +433,27 @@ class WideDeepBinary():
 
         return best_params
 
-    def save(self, path):
-        pass
+    def save(self, path='./model_file', name='widedeepbinary_model'):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        tf_model_name = path + "/" + name
+        param_file_name = tf_model_name + ".param"
+        f = open(param_file_name, 'wb')  # pickle只能以二进制格式存储数据到文件
+        f.write(pickle.dumps(self.get_params()))  # dumps序列化源数据后写入文件
+        f.close()
+        tf.saved_model.save(self.model, tf_model_name)
 
-    def load(self, path):
-        pass
+    @classmethod
+    def load(cls, path='./model_file', name='widedeepbinary_model'):
+        model = WideDeepBinary([], [], [], 0)
+
+        tf_model_name = path + "/" + name
+        param_file_name = tf_model_name + ".param"
+
+        f = open(param_file_name, 'rb')
+        params_dict = pickle.loads(f.read())
+        f.close()
+        model._load_params(params_dict)
+
+        model.model = tf.keras.models.load_model(tf_model_name)
+        return model

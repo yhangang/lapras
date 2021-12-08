@@ -68,7 +68,8 @@ install_requires = [
         'seaborn >= 0.10.1',
         'statsmodels >= 0.13.1',
         'tensorflow >= 2.2.0, <=2.5.0',
-        'hyperopt >= 0.2.7'
+        'hyperopt >= 0.2.7',
+        'pickle >= 4.0',
     ]
 
 

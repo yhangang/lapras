@@ -17,8 +17,8 @@ setup(
     author='Badtom',
     author_email='yhangang@gmail.com',
     license='MIT',
-    python_requires = '>=3.5',
-    # install_requires = [
+    python_requires='>=3.5',
+    # install_requires=[
     #     'numpy >= 1.18.4',
     #     'pandas >= 0.25.1, <=0.25.3',
     #     'scipy >= 1.3.2',
@@ -26,7 +26,8 @@ setup(
     #     'seaborn >= 0.10.1',
     #     'statsmodels >= 0.13.1',
     #     'tensorflow >= 2.2.0, <=2.5.0',
-    #     'hyperopt >= 0.2.7'
+    #     'hyperopt >= 0.2.7',
+    #     'pickle >= 4.0',
     # ],
     classifiers=[
         'Operating System :: POSIX',
