@@ -176,8 +176,13 @@ class WideDeepBinary():
             test_rnn_df = rnn_df[rnn_df[id_label].isin(test_id[id_label])]
 
             # 对离散特征进行LabelEncoder编码
-            category_X_train = train_basic_df[[]]
-            category_X_test = test_basic_df[[]]
+            if self.static_discrete_X_cols:
+                category_X_train = pd.DataFrame()
+                category_X_test = pd.DataFrame()
+            else:
+                category_X_train = train_basic_df[[]]
+                category_X_test = test_basic_df[[]]
+
             for col in self.static_discrete_X_cols:
                 le = LabelEncoder()
                 le.fit(train_basic_df[col])
@@ -220,7 +225,11 @@ class WideDeepBinary():
             if self.static_discrete_X_cols and not self.le_dict:
                 print("请首先生成训练集样本，LabelEncoder还未初始化！")
                 return
-            category_X_all = pd.DataFrame()
+
+            if self.static_discrete_X_cols:
+                category_X_all = pd.DataFrame()
+            else:
+                category_X_all = all_basic_df[[]]
             for col in self.static_discrete_X_cols:
                 le = self.le_dict[col]
                 test_basic_col_tmp = all_basic_df[col].map(lambda s: -99 if s not in le.classes_ else s)
