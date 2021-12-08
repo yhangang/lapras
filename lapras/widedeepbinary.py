@@ -346,10 +346,8 @@ class WideDeepBinary():
 
     def param_optimize(self, X, y, X_test, y_test, embedding_output_dim=(10, 30), discrete_cells=[8, 16, 32, 64],
                         rnn_cells=[64, 128, 256, 512], hidden_units_layers=(2, 4),
-                        hidden_units_cells1=([64, 128, 256, 512]),
-                        hidden_units_cells2=([16, 32, 64, 128]),
-                        hidden_units_cells3=([4, 8, 16, 32]),
-                        hidden_units_cells4=([2, 4, 8]),
+                        hidden_units_cells1=[64, 128, 256, 512], hidden_units_cells2=[16, 32, 64, 128],
+                        hidden_units_cells3=[4, 8, 16, 32], hidden_units_cells4=[2, 4, 8],
                         activation=['swish', 'tanh', 'sigmoid', 'relu'], dropout=(0.1, 0.8),
                         embedding_input_dim=1000, epochs=10, batch_size=256, max_evals=100):
         """
