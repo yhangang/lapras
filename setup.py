@@ -18,17 +18,17 @@ setup(
     author_email='yhangang@gmail.com',
     license='MIT',
     python_requires='>=3.5',
-    # install_requires=[
-    #     'numpy >= 1.18.4',
-    #     'pandas >= 0.25.1, <=0.25.3',
-    #     'scipy >= 1.3.2',
-    #     'scikit-learn >= 0.20.2, <=0.22.2',
-    #     'seaborn >= 0.10.1',
-    #     'statsmodels >= 0.13.1',
-    #     'tensorflow >= 2.2.0, <=2.5.0',
-    #     'hyperopt >= 0.2.7',
-    #     'pickle >= 4.0',
-    # ],
+    install_requires=[
+        # 'numpy >= 1.18.4',
+        # 'pandas >= 0.25.1, <=0.25.3',
+        # 'scipy >= 1.3.2',
+        # 'scikit-learn >= 0.20.2, <=0.22.2',
+        # 'seaborn >= 0.10.1',
+        # 'statsmodels >= 0.13.1',
+        # 'tensorflow >= 2.2.0, <=2.5.0',
+        # 'hyperopt >= 0.2.7',
+        # 'pickle >= 4.0',
+    ],
     classifiers=[
         'Operating System :: POSIX',
         'Operating System :: Microsoft :: Windows',
@@ -39,7 +39,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
-    package_data = {
+    package_data={
         # If any package contains *.txt or *.rst files, include them:
         # '': ['*.txt', '*.rst', '*.csv'],
         # include any *.msg files found in the 'test' package, too:
@@ -47,7 +47,7 @@ setup(
     },
     # data_files=[('DealConfig.py'),('performance.py')],
 
-    keywords=['scorecard'],
+    keywords=['scorecard', 'deep learning', 'wide&deep'],
     entry_points={
 
     },

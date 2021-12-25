@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn import model_selection
 from tensorflow.python.keras.metrics import AUC, Precision
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import roc_auc_score, roc_curve
 from tensorflow.python.keras.callbacks import Callback
 import tensorflow as tf
@@ -35,8 +35,10 @@ class WideDeepBinary():
         self.embedding = self.discrete_cells = self.rnn_cells = self.activation = self.dropout = \
             self.hidden_units = self.model = None
         self.le_dict = {}
+        self.scalar_basic = None
+        self.scalar_rnn = None
 
-    def compile(self, embedding=(1000, 8), discrete_cells=20, rnn_cells=64, hidden_units=[64,16], activation='swish',
+    def compile(self, embedding=(1000, 8), discrete_cells=20, rnn_cells=64, hidden_units=[64,16], activation='relu',
                  dropout=0.3, loss=tf.keras.losses.BinaryCrossentropy(),
                 optimizer=tf.keras.optimizers.Adam(1e-4),  metrics=[Precision(), AUC()], summary=True, **kwargs):
         """
@@ -63,11 +65,7 @@ class WideDeepBinary():
         input2 = tf.keras.layers.Input(shape=len(self.static_discrete_X_cols))  # 离散静态数据
         input3 = tf.keras.layers.Input(shape=(self.ts_step, len(self.rnn_continue_X_cols)))  # 连续时间序列数据
 
-        # 静态连续特征不为空时
-        if self.static_continue_X_cols:
-            x1 = tf.keras.layers.BatchNormalization()(input1)
-        else:
-            x1 = input1
+        x1 = input1
 
         # 根据实际类别数调整embedding_input_dim
         if self.static_discrete_X_cols:
@@ -82,8 +80,7 @@ class WideDeepBinary():
         else:
             x2 = input2
 
-        x3 = tf.keras.layers.BatchNormalization()(input3)
-        x3 = tf.keras.layers.LSTM(units=rnn_cells, recurrent_initializer='glorot_uniform')(x3)
+        x3 = tf.keras.layers.LSTM(units=rnn_cells, recurrent_initializer='glorot_uniform')(input3)
 
         x = tf.keras.layers.concatenate([x1, x2, x3], axis=1)
 
@@ -113,9 +110,7 @@ class WideDeepBinary():
         #######################################################################
 
         for i in range(len(hidden_units)):
-            x = tf.keras.layers.Dense(hidden_units[i])(x)
-            x = tf.keras.layers.BatchNormalization()(x)
-            x = tf.keras.layers.Activation(activation)(x)
+            x = tf.keras.layers.Dense(hidden_units[i], activation=activation)(x)
             x = tf.keras.layers.Dropout(dropout)(x)
 
         output = tf.keras.layers.Dense(1, activation='sigmoid', name='action')(x)
@@ -144,20 +139,19 @@ class WideDeepBinary():
             fill_na: 缺失值填充
         """
         if type(basic_df) != pd.DataFrame or type(rnn_df) != pd.DataFrame:
-            print("Error: Input X data must be Pandas.DataFrame format.")
-            return
+            raise ValueError("Error: Input X data must be Pandas.DataFrame format.\n输入数据必须是Pandas DataFrame格式！")
 
         if len(basic_df)*self.ts_step != len(rnn_df):
-            print("Error: Some of the train data size is different from others, please check it again.")
-            return
+            raise ValueError("Error: Some of the train data size is different from others, please check it again."
+                             "\n时间序列数据记录数没对齐！")
 
         try:
             basic_df[self.static_continue_X_cols]
             basic_df[self.static_discrete_X_cols]
             rnn_df[self.rnn_continue_X_cols]
         except:
-            print("Error: Some of the declared columns is not in the input data, please check it again.")
-            return
+            raise ValueError("Error: Some of the declared columns is not in the input data, please check it again."
+                             "\n声明的列名在数据中不存在！")
 
         # 对连续型数据填充缺失值
         basic_df = basic_df.fillna(fill_na)
@@ -174,6 +168,22 @@ class WideDeepBinary():
             test_basic_df = basic_df[basic_df[id_label].isin(test_id[id_label])]
             train_rnn_df = rnn_df[rnn_df[id_label].isin(train_id[id_label])]
             test_rnn_df = rnn_df[rnn_df[id_label].isin(test_id[id_label])]
+
+            # 排序
+            train_basic_df = train_basic_df.sort_values(id_label)
+            test_basic_df = test_basic_df.sort_values(id_label)
+            train_rnn_df = train_rnn_df.sort_values([id_label, ts_label])
+            test_rnn_df = test_rnn_df.sort_values([id_label, ts_label])
+
+            self.scalar_basic = StandardScaler()
+            self.scalar_rnn = StandardScaler()
+            self.scalar_basic.fit(train_basic_df[self.static_continue_X_cols])
+            self.scalar_rnn.fit(train_rnn_df[self.rnn_continue_X_cols])
+
+            basic_X_train_transform = self.scalar_basic.transform(train_basic_df[self.static_continue_X_cols])
+            basic_X_test_transform = self.scalar_basic.transform(test_basic_df[self.static_continue_X_cols])
+            rnn_X_train_transform = self.scalar_rnn.transform(train_rnn_df[self.rnn_continue_X_cols])
+            rnn_X_test_transform = self.scalar_rnn.transform(test_rnn_df[self.rnn_continue_X_cols])
 
             # 对离散特征进行LabelEncoder编码
             if self.static_discrete_X_cols:
@@ -194,25 +204,19 @@ class WideDeepBinary():
                 category_X_test = pd.concat([category_X_test, pd.Series(le.transform(test_basic_col_tmp))], axis=1)
                 self.le_dict[col] = le
 
-            # 排序
-            train_basic_df = train_basic_df.sort_values(id_label)
-            test_basic_df = test_basic_df.sort_values(id_label)
-            train_rnn_df = train_rnn_df.sort_values([id_label, ts_label])
-            test_rnn_df = test_rnn_df.sort_values([id_label, ts_label])
-
             # 构造Y标向量
             y_train = np.array(train_basic_df[[y_label]])
             y_test = np.array(test_basic_df[[y_label]])
 
             # 按特征类型构造入模向量X
-            static_continue_X_train = np.array(train_basic_df[self.static_continue_X_cols])
-            static_continue_X_test = np.array(test_basic_df[self.static_continue_X_cols])
+            static_continue_X_train = np.array(basic_X_train_transform)
+            static_continue_X_test = np.array(basic_X_test_transform)
 
             static_discrete_X_train = np.array(category_X_train)
             static_discrete_X_test = np.array(category_X_test)
 
-            rnn_continue_X_train = self._create_dataset(train_rnn_df[self.rnn_continue_X_cols], self.ts_step)
-            rnn_continue_X_test = self._create_dataset(test_rnn_df[self.rnn_continue_X_cols], self.ts_step)
+            rnn_continue_X_train = self._create_dataset(rnn_X_train_transform, self.ts_step)
+            rnn_continue_X_test = self._create_dataset(rnn_X_test_transform, self.ts_step)
 
             return [static_continue_X_train, static_discrete_X_train, rnn_continue_X_train], y_train,\
                     [static_continue_X_test, static_discrete_X_test, rnn_continue_X_test], y_test
@@ -220,6 +224,13 @@ class WideDeepBinary():
         else:
             all_basic_df = basic_df
             all_rnn_df = rnn_df
+
+            # 排序
+            all_basic_df = all_basic_df.sort_values(id_label)
+            all_rnn_df = all_rnn_df.sort_values([id_label, ts_label])
+
+            basic_X_all_transform = self.scalar_basic.transform(all_basic_df[self.static_continue_X_cols])
+            rnn_X_all_transform = self.scalar_rnn.transform(all_rnn_df[self.rnn_continue_X_cols])
 
             # 对离散特征进行LabelEncoder编码
             if self.static_discrete_X_cols and not self.le_dict:
@@ -235,13 +246,12 @@ class WideDeepBinary():
                 test_basic_col_tmp = all_basic_df[col].map(lambda s: -99 if s not in le.classes_ else s)
                 category_X_all = pd.concat([category_X_all, pd.Series(le.transform(test_basic_col_tmp))], axis=1)
 
-            all_basic_df = all_basic_df.sort_values(id_label)
-            all_rnn_df = all_rnn_df.sort_values([id_label, ts_label])
+
 
             # 按特征类型构造入模向量X
-            static_continue_X_train = np.array(all_basic_df[self.static_continue_X_cols])
-            static_discrete_X_train = np.array(all_basic_df[self.static_discrete_X_cols])
-            rnn_continue_X_train = self._create_dataset(all_rnn_df[self.rnn_continue_X_cols], self.ts_step)
+            static_continue_X_train = np.array(basic_X_all_transform)
+            static_discrete_X_train = np.array(category_X_all)
+            rnn_continue_X_train = self._create_dataset(rnn_X_all_transform, self.ts_step)
 
             return [static_continue_X_train, static_discrete_X_train, rnn_continue_X_train], all_basic_df[[id_label]]
 
@@ -319,7 +329,7 @@ class WideDeepBinary():
         将二维时间序列数据reshape成三维
         """
         n = int(X.shape[0] / ts_step)
-        return X.values.reshape(n, ts_step, X.shape[1])
+        return X.reshape(n, ts_step, X.shape[1])
 
     def get_params(self):
         params_dict = {'static_continue_X_cols': self.static_continue_X_cols,
@@ -327,7 +337,8 @@ class WideDeepBinary():
                        'rnn_continue_X_cols': self.rnn_continue_X_cols, 'ts_step': self.ts_step,
                        'embedding': self.embedding, 'discrete_cells': self.discrete_cells, 'rnn_cells': self.rnn_cells,
                        'hidden_units': self.hidden_units, 'activation': self.activation, 'dropout': self.dropout,
-                       'network_reinforce': self.network_reinforce, 'le_dict': self.le_dict}
+                       'network_reinforce': self.network_reinforce, 'le_dict': self.le_dict,
+                       'scalar_basic': self.scalar_basic, 'scalar_rnn': self.scalar_rnn}
         return params_dict
 
     def _load_params(self, params_dict: dict):
@@ -343,6 +354,8 @@ class WideDeepBinary():
         self.dropout = params_dict['dropout']
         self.network_reinforce = params_dict['network_reinforce']
         self.le_dict = params_dict['le_dict']
+        self.scalar_basic = params_dict['scalar_basic']
+        self.scalar_rnn = params_dict['scalar_rnn']
 
     def param_optimize(self, X, y, X_test, y_test, embedding_output_dim=(10, 30), discrete_cells=[8, 16, 32, 64],
                         rnn_cells=[64, 128, 256, 512], hidden_units_layers=(2, 4),
