@@ -175,13 +175,17 @@ class WideDeepBinary():
             train_rnn_df = train_rnn_df.sort_values([id_label, ts_label])
             test_rnn_df = test_rnn_df.sort_values([id_label, ts_label])
 
-            self.scalar_basic = StandardScaler()
-            self.scalar_rnn = StandardScaler()
-            self.scalar_basic.fit(train_basic_df[self.static_continue_X_cols])
-            self.scalar_rnn.fit(train_rnn_df[self.rnn_continue_X_cols])
+            if self.static_continue_X_cols:
+                self.scalar_basic = StandardScaler()
+                self.scalar_basic.fit(train_basic_df[self.static_continue_X_cols])
+                basic_X_train_transform = self.scalar_basic.transform(train_basic_df[self.static_continue_X_cols])
+                basic_X_test_transform = self.scalar_basic.transform(test_basic_df[self.static_continue_X_cols])
+            else:
+                basic_X_train_transform = train_basic_df[[]]
+                basic_X_test_transform = test_basic_df[[]]
 
-            basic_X_train_transform = self.scalar_basic.transform(train_basic_df[self.static_continue_X_cols])
-            basic_X_test_transform = self.scalar_basic.transform(test_basic_df[self.static_continue_X_cols])
+            self.scalar_rnn = StandardScaler()
+            self.scalar_rnn.fit(train_rnn_df[self.rnn_continue_X_cols])
             rnn_X_train_transform = self.scalar_rnn.transform(train_rnn_df[self.rnn_continue_X_cols])
             rnn_X_test_transform = self.scalar_rnn.transform(test_rnn_df[self.rnn_continue_X_cols])
 
@@ -229,7 +233,10 @@ class WideDeepBinary():
             all_basic_df = all_basic_df.sort_values(id_label)
             all_rnn_df = all_rnn_df.sort_values([id_label, ts_label])
 
-            basic_X_all_transform = self.scalar_basic.transform(all_basic_df[self.static_continue_X_cols])
+            if self.static_continue_X_cols:
+                basic_X_all_transform = self.scalar_basic.transform(all_basic_df[self.static_continue_X_cols])
+            else:
+                basic_X_all_transform = all_basic_df[[]]
             rnn_X_all_transform = self.scalar_rnn.transform(all_rnn_df[self.rnn_continue_X_cols])
 
             # 对离散特征进行LabelEncoder编码
