@@ -295,7 +295,7 @@ class WideDeepBinary():
         params_dict = {'static_continue_X_cols': self.static_continue_X_cols,
                        'static_discrete_X_cols': self.static_discrete_X_cols,
                        'rnn_continue_X_cols': self.rnn_continue_X_cols, 'ts_step': self.ts_step,
-                       'embedding': self.embedding, 'discrete_cells': self.discrete_cells, 'rnn_cells': self.rnn_cells,
+                       'embedding_dim': self.embedding_dim, 'rnn_cells': self.rnn_cells,
                        'hidden_units': self.hidden_units, 'activation': self.activation, 'dropout': self.dropout,
                        'le_dict': self.le_dict,
                        'scalar_basic': self.scalar_basic, 'scalar_rnn': self.scalar_rnn}
@@ -306,8 +306,7 @@ class WideDeepBinary():
         self.static_discrete_X_cols = params_dict['static_discrete_X_cols']
         self.rnn_continue_X_cols = params_dict['rnn_continue_X_cols']
         self.ts_step = params_dict['ts_step']
-        self.embedding = params_dict['embedding']
-        self.discrete_cells = params_dict['discrete_cells']
+        self.embedding_dim = params_dict['embedding_dim']
         self.rnn_cells = params_dict['rnn_cells']
         self.hidden_units = params_dict['hidden_units']
         self.activation = params_dict['activation']
