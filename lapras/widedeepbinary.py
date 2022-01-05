@@ -20,7 +20,7 @@ import pickle
 class WideDeepBinary():
     def __init__(self, static_continue_X_cols:list, static_discrete_X_cols:list, rnn_continue_X_cols:list, ts_step: int):
         """
-        Column names doesn't matter, but you should know what are you modeling.
+        Column names don't matter, but you should know what are you modeling.
         Args:
             static_continue_X_cols: 静态连续特征列名
             static_discrete_X_cols: 静态离散特征列名
