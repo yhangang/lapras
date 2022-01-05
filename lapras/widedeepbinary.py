@@ -238,7 +238,7 @@ class WideDeepBinary():
             for col in self.static_discrete_X_cols:
                 X_predict.append(np.array(category_X_all[col]))
 
-            return X_predict, all_basic_df[[id_label]]
+            return X_predict, all_basic_df[[id_label]].values
 
     def fit(self, X_train, y_train, X_test=None, y_test=None, epochs=10, batch_size=256, validation_split=0, callback=True,
             **kwargs):
