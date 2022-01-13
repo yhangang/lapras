@@ -1,8 +1,6 @@
 import math
 import os
 
-import numpy
-
 import numpy as np
 import pandas as pd
 from tensorflow.python.keras.metrics import AUC, Precision
@@ -41,9 +39,9 @@ class DSSM():
         self.data_fitted = False
 
         self.model = self.u_hidden_units = self.i_hidden_units = self.activation = self.dropout = self.embedding_dim = \
-            self.user_input = self.item_input = None
+            self.user_input_len = self.item_input_len = None
 
-    def compile(self, embedding_dim=4, u_hidden_units=[128,64,16], i_hidden_units=[64,16], activation='relu',
+    def compile(self, embedding_dim=4, u_hidden_units=[128,64,16], i_hidden_units=[64,32,16], activation='relu',
                  dropout=0.3, loss=tf.keras.losses.BinaryCrossentropy(),
                 optimizer=tf.keras.optimizers.Adam(1e-4),  metrics=[Precision(), AUC()], summary=True, **kwargs):
         """
@@ -80,13 +78,11 @@ class DSSM():
         user_vector_list = []
         item_vector_list = []
 
-        # u_dense = tf.keras.layers.BatchNormalization()(user_input_features['u_continue_cols'])
-        # u_dense = tf.keras.layers.Dense(16, activation='relu')(u_dense)
-        user_vector_list.append(user_input_features['u_continue_cols'])
+        u_dense = tf.keras.layers.BatchNormalization()(user_input_features['u_continue_cols'])
+        user_vector_list.append(u_dense)
 
-        # i_dense = tf.keras.layers.BatchNormalization()(item_input_features['i_continue_cols'])
-        # i_dense = tf.keras.layers.Dense(16, activation='relu')(i_dense)
-        item_vector_list.append(item_input_features['i_continue_cols'])
+        i_dense = tf.keras.layers.BatchNormalization()(item_input_features['i_continue_cols'])
+        item_vector_list.append(i_dense)
 
         for col in self.u_discrete_cols:
             le = self.le_dict[col]
@@ -100,7 +96,7 @@ class DSSM():
                 self.embedding_dim, name=col)(item_input_features[col]), [-1, self.embedding_dim]))
             else:
                 embedding_dim = int(len(le.classes_) ** 0.25) + 1  # 动态确定维度
-                embedding_layer = tf.keras.layers.Embedding(len(le.classes_)+10, embedding_dim, name="his"+str(col))  # ItemId的embedding层用户和物品塔共用
+                embedding_layer = tf.keras.layers.Embedding(len(le.classes_)+10, embedding_dim, name=col)  # ItemId的embedding层用户和物品塔共用
                 share_embedding_dict[col] = embedding_layer
                 item_vector_list.append(tf.reshape(embedding_layer(item_input_features[col]), [-1, embedding_dim]))
 
@@ -110,29 +106,34 @@ class DSSM():
             embedding_dim = int(len(le.classes_) ** 0.25) + 1  # 动态确定维度
             lstm_out_dim = int((embedding_dim * self.ts_step)/2)
 
-            embedding_series = share_embedding_dict[self.u_history_col_names[i]](user_input_features[self.u_history_cols[i]])
+            embedding_series = share_embedding_dict[item_col_name](user_input_features[self.u_history_cols[i]])
+            embedding_series = tf.keras.layers.BatchNormalization()(embedding_series)
             user_vector_list.append(tf.keras.layers.LSTM(units=lstm_out_dim)(embedding_series))
 
         user_embedding = tf.keras.layers.concatenate(user_vector_list, axis=1)
         item_embedding = tf.keras.layers.concatenate(item_vector_list, axis=1)
 
         for i in range(len(self.u_hidden_units[:-1])):
+            user_embedding = tf.keras.layers.BatchNormalization()(user_embedding)
             user_embedding = tf.keras.layers.Dense(self.u_hidden_units[i], activation=self.activation)(user_embedding)
             user_embedding = tf.keras.layers.Dropout(self.dropout)(user_embedding)
-        user_embedding = tf.keras.layers.Dense(self.u_hidden_units[-1], name='user_embedding', activation=self.activation)(user_embedding)
+        user_embedding = tf.keras.layers.Dense(self.u_hidden_units[-1], name='user_embedding', activation='tanh')(user_embedding)
 
         for i in range(len(self.i_hidden_units[:-1])):
+            item_embedding = tf.keras.layers.BatchNormalization()(item_embedding)
             item_embedding = tf.keras.layers.Dense(self.i_hidden_units[i], activation=self.activation)(item_embedding)
             item_embedding = tf.keras.layers.Dropout(self.dropout)(item_embedding)
-        item_embedding = tf.keras.layers.Dense(self.i_hidden_units[-1], name='item_embedding', activation=self.activation)(item_embedding)
+        item_embedding = tf.keras.layers.Dense(self.i_hidden_units[-1], name='item_embedding', activation='tanh')(item_embedding)
 
         # 双塔向量做内积输出
         output = tf.expand_dims(tf.reduce_sum(user_embedding * item_embedding, axis=1), 1)
         output = tf.keras.layers.Dense(1, activation='sigmoid', name='output')(output)
 
-        self.user_input = list(user_input_features.values())
-        self.item_input = list(item_input_features.values())
-        inputs_list = self.user_input + self.item_input
+        user_input = list(user_input_features.values())
+        self.user_input_len = len(user_input)
+        item_input = list(item_input_features.values())
+        self.item_input_len = len(item_input)
+        inputs_list = user_input + item_input
         self.model = tf.keras.models.Model(inputs=inputs_list, outputs=output)
 
         self.model.compile(loss=loss, optimizer=optimizer, metrics=metrics, **kwargs)
@@ -304,7 +305,7 @@ class DSSM():
         X_input = [self.scalar_dict['scalar_user'].transform(basic_df[self.u_continue_cols])]
         for col in self.u_discrete_cols:
             X_input.append(basic_df[col+str('_transformed')])
-        print("用户离散特征处理完成")
+        print("用户基础特征处理完成")
 
         for col in self.u_history_cols:
             constant_fill_na = dict(zip(le.classes_, le.transform(le.classes_)))[fill_na]  # 取出fill_na在编码后的值
@@ -321,19 +322,6 @@ class DSSM():
             X_input.append(basic_df[col+str('_transformed')])
         print("物品特征处理完成")
         return X_input, basic_df[y_label].values, basic_df['id'].values
-
-    # def generator(self, user_df: pd.DataFrame, item_df: pd.DataFrame, user_his_df: pd.DataFrame, label_df: pd.DataFrame,
-    #                    u_id_col: str, i_id_col: str, y_label: str, fill_na=0, batch_size=1000):
-    #     while True:
-    #         start_index = 0
-    #         end_index = batch_size
-    #         for i in range(int(len(user_df)/batch_size) + 1):
-    #             X, y, _ = self.label_processing(user_df=user_df, item_df=item_df, user_his_df=user_his_df, label_df=label_df,
-    #                                   u_id_col=u_id_col, i_id_col=i_id_col, y_label=y_label,start_index=start_index,
-    #                                   end_index=end_index, fill_na=fill_na)
-    #             start_index += batch_size
-    #             end_index += end_index
-    #             yield X, y
 
     def fit(self, X_train, y_train, X_test=None, y_test=None, epochs=10, batch_size=256, validation_split=0,
             callback=True,
@@ -381,13 +369,15 @@ class DSSM():
         return predictions
 
     def get_user_model(self):
+        inputs = self.model.inputs[:self.user_input_len]
         output = self.model.get_layer(name="user_embedding").output
-        model = tf.keras.models.Model(inputs=self.user_input, outputs=output)
+        model = tf.keras.models.Model(inputs=inputs, outputs=output)
         return model
 
     def get_item_model(self):
+        inputs = self.model.inputs[self.user_input_len:]
         output = self.model.get_layer(name="item_embedding").output
-        model = tf.keras.models.Model(inputs=self.item_input, outputs=output)
+        model = tf.keras.models.Model(inputs=inputs, outputs=output)
         return model
 
     def embedding_inner_product(self, user_embedding: np.ndarray, item_embedding: np.ndarray):
@@ -404,7 +394,8 @@ class DSSM():
                        'ts_step': self.ts_step, 'le_dict': self.le_dict, 'scalar_dict': self.scalar_dict,
                        'data_fitted': self.data_fitted, 'u_hidden_units': self.u_hidden_units,
                        'i_hidden_units': self.i_hidden_units, 'activation': self.activation, 'dropout': self.dropout,
-                       'embedding_dim': self.embedding_dim}
+                       'embedding_dim': self.embedding_dim, 'user_input_len': self.user_input_len,
+                       'item_input_len': self.item_input_len}
         return params_dict
 
     def _load_params(self, params_dict: dict):
@@ -423,6 +414,8 @@ class DSSM():
         self.activation = params_dict['activation']
         self.dropout = params_dict['dropout']
         self.embedding_dim = params_dict['embedding_dim']
+        self.user_input_len = params_dict['user_input_len']
+        self.item_input_len = params_dict['item_input_len']
 
     def save(self, path='./model_file', name='dssm_model'):
         if not os.path.exists(path):
