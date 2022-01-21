@@ -186,6 +186,8 @@ class DSSM():
         user_df = user_df.fillna(fill_na)
         user_his_df = user_his_df.fillna(fill_na)
 
+        if end_index == -1:
+            end_index = len(user_df)
         u_ids = user_df.iloc[start_index:end_index][[u_id_col]]
         # 取出本次batch的数据
         user_batch_df = user_df[user_df[u_id_col].isin(u_ids[u_id_col])]
@@ -228,6 +230,8 @@ class DSSM():
         # 填充缺失值
         item_df = item_df.fillna(fill_na)
 
+        if end_index == -1:
+            end_index = len(item_df)
         i_ids = item_df.iloc[start_index:end_index][[i_id_col]]
         # 取出本次batch的数据
         item_batch_df = item_df[item_df[i_id_col].isin(i_ids[i_id_col])]
@@ -273,7 +277,8 @@ class DSSM():
             tmp = item_df[col].map(lambda s: fill_na if s not in le.classes_ else s)
             item_df[col+str('_transformed')] = le.transform(tmp)
 
-
+        if end_index == -1:
+            end_index = len(user_df)
         u_ids = user_df.iloc[start_index:end_index][[u_id_col]]
         # 取出本次batch的数据
         user_batch_df = user_df[user_df[u_id_col].isin(u_ids[u_id_col])]
@@ -290,7 +295,6 @@ class DSSM():
             le = self.le_dict[item_col_name]
             tmp = user_batch_his_df[col].map(lambda s: fill_na if s not in le.classes_ else s)
             user_batch_his_df[col+str('_transformed')] = le.transform(tmp)
-
 
         # 获取用户侧输入特征
         label_df = label_df.drop_duplicates([u_id_col, i_id_col], keep='first')  # 防止出现脏数据
