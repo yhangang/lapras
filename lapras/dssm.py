@@ -120,19 +120,20 @@ class DSSM():
             # user_embedding = tf.keras.layers.BatchNormalization()(user_embedding)
             user_embedding = tf.keras.layers.Dense(self.u_hidden_units[i], activation=self.activation)(user_embedding)
             user_embedding = tf.keras.layers.Dropout(self.dropout)(user_embedding)
-        user_embedding = tf.keras.layers.Dense(self.u_hidden_units[-1], name='user_embedding', activation='relu')(user_embedding)
+        user_embedding = tf.keras.layers.Dense(self.u_hidden_units[-1], name='user_embedding', activation='tanh')(user_embedding)
         # user_embedding = tf.keras.layers.BatchNormalization()(user_embedding)
 
         for i in range(len(self.i_hidden_units[:-1])):
             # item_embedding = tf.keras.layers.BatchNormalization()(item_embedding)
             item_embedding = tf.keras.layers.Dense(self.i_hidden_units[i], activation=self.activation)(item_embedding)
             item_embedding = tf.keras.layers.Dropout(self.dropout)(item_embedding)
-        item_embedding = tf.keras.layers.Dense(self.i_hidden_units[-1], name='item_embedding', activation='relu')(item_embedding)
+        item_embedding = tf.keras.layers.Dense(self.i_hidden_units[-1], name='item_embedding', activation='tanh')(item_embedding)
         # item_embedding = tf.keras.layers.BatchNormalization()(item_embedding)
 
         # 双塔向量做内积输出
         output = tf.expand_dims(tf.reduce_sum(user_embedding * item_embedding, axis=1), 1)
-        output = tf.keras.layers.Dense(1, activation='sigmoid', name='output')(output)
+        # output = tf.keras.layers.Dense(1, activation='sigmoid', name='output')(output)
+        output = tf.sigmoid(output)
 
         user_input = list(user_input_features.values())
         self.user_input_len = len(user_input)
@@ -303,8 +304,12 @@ class DSSM():
 
         # 获取用户侧输入特征
         label_df = label_df.drop_duplicates([u_id_col, i_id_col], keep='first')  # 防止出现脏数据
+        print("label_df长度：" + str(len(label_df)))
+        print("用户长度："+str(len(user_batch_df)))
         basic_df = pd.merge(user_batch_df, label_df, how='inner', on=[u_id_col])
+        print("和用户拼接后长度：" + str(len(basic_df)))
         basic_df = pd.merge(basic_df, item_df, how='inner', on=[i_id_col])
+        print("和图片拼接后长度：" + str(len(basic_df)))
         basic_df['id'] = basic_df[u_id_col] + "@" + basic_df[i_id_col]
         user_batch_his_df = pd.merge(basic_df[['id', u_id_col]], user_batch_his_df, how='left', on=[u_id_col])
         user_batch_his_df = user_batch_his_df.fillna(fill_na)  # 对没有任何历史记录的用户填充
