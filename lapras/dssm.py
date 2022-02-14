@@ -11,11 +11,12 @@ from tensorflow.python.keras.callbacks import Callback
 import tensorflow as tf
 from collections import OrderedDict
 import pickle
+import datetime
 
 
 class DSSM():
     def __init__(self, u_continue_cols: list, u_discrete_cols: list, i_continue_cols: list, i_discrete_cols: list,
-                 u_history_cols: list, u_history_col_names: list, ts_step=10):
+                 u_history_cols: list, u_history_col_names: list, u_history_col_ts_step: dict):
         """
         Column names doesn't matter, but you should know what are you modeling.
         Args:
@@ -25,7 +26,7 @@ class DSSM():
             i_discrete_cols: 物品离散特征列名
             u_history_cols: 用户关于物品历史记录特征列名
             u_history_col_names: 用户历史记录列对应的物品特征列名
-
+            u_history_col_ts_step: 用户历史行为对应的序列长度
         """
         self.u_continue_cols = u_continue_cols
         self.u_discrete_cols = u_discrete_cols
@@ -33,7 +34,7 @@ class DSSM():
         self.u_history_col_names = u_history_col_names
         self.i_continue_cols = i_continue_cols
         self.i_discrete_cols = i_discrete_cols
-        self.ts_step = ts_step
+        self.u_history_col_ts_step = u_history_col_ts_step
         self.le_dict = {}
         self.scalar_dict = {}
         self.data_fitted = False
@@ -41,7 +42,7 @@ class DSSM():
         self.model = self.u_hidden_units = self.i_hidden_units = self.activation = self.dropout = self.embedding_dim = \
             self.user_input_len = self.item_input_len = None
 
-    def compile(self, embedding_dim=4, u_hidden_units=[128,64,16], i_hidden_units=[64,32,16], activation='relu',
+    def compile(self, embedding_dim=4, u_hidden_units=[128,64,20], i_hidden_units=[64,32,20], activation='relu',
                  dropout=0.3, loss=tf.keras.losses.BinaryCrossentropy(),
                 optimizer=tf.keras.optimizers.Adam(1e-4),  metrics=[Precision(), AUC()], summary=True, **kwargs):
         """
@@ -55,7 +56,7 @@ class DSSM():
                     optimizer: 优化器
                     metrics: 效果度量函数
                     summary: 是否输出summary信息
-                """
+        """
         self.embedding_dim = embedding_dim
         self.u_hidden_units = u_hidden_units
         self.i_hidden_units = i_hidden_units
@@ -65,38 +66,40 @@ class DSSM():
         # 定义输入格式
         user_input_features = OrderedDict()
         item_input_features = OrderedDict()
-        user_input_features['u_continue_cols'] = tf.keras.layers.Input(shape=len(self.u_continue_cols), name='u_continue_cols')  # 用户数值特征
+        user_input_features['u_continue_cols'] = tf.keras.layers.Input(shape=len(self.u_continue_cols), name='u_continue_cols_input')  # 用户数值特征
         for col in self.u_discrete_cols:
-            user_input_features[col] = tf.keras.layers.Input(shape=1)  # 用户离散特征
-        item_input_features['i_continue_cols'] = tf.keras.layers.Input(shape=len(self.i_continue_cols), name='i_continue_cols')  # 物品数值特征
+            user_input_features[col] = tf.keras.layers.Input(shape=1, name=col+'_input')  # 用户离散特征
+        item_input_features['i_continue_cols'] = tf.keras.layers.Input(shape=len(self.i_continue_cols), name='i_continue_cols_input')  # 物品数值特征
         for col in self.i_discrete_cols:
-            item_input_features[col] = tf.keras.layers.Input(shape=1)  # 物品离散特征
+            item_input_features[col] = tf.keras.layers.Input(shape=1, name=col+'_input')  # 物品离散特征
         for col in self.u_history_cols:
-            user_input_features[col] = tf.keras.layers.Input(shape=10)  # 用户关于物品的历史序列特征
+            user_input_features[col] = tf.keras.layers.Input(shape=self.u_history_col_ts_step[col], name=col+'_input')  # 用户关于物品的历史序列特征
 
         # 构造双塔结构
         user_vector_list = []
         item_vector_list = []
 
-        u_dense = tf.keras.layers.BatchNormalization()(user_input_features['u_continue_cols'])
+        # u_dense = tf.keras.layers.BatchNormalization()(user_input_features['u_continue_cols'])
+        u_dense = user_input_features['u_continue_cols']
         user_vector_list.append(u_dense)
 
-        i_dense = tf.keras.layers.BatchNormalization()(item_input_features['i_continue_cols'])
+        # i_dense = tf.keras.layers.BatchNormalization()(item_input_features['i_continue_cols'])
+        i_dense = item_input_features['i_continue_cols']
         item_vector_list.append(i_dense)
 
         for col in self.u_discrete_cols:
             le = self.le_dict[col]
             user_vector_list.append(tf.reshape(tf.keras.layers.Embedding(len(le.classes_)+10,
-                self.embedding_dim, name=col)(user_input_features[col]), [-1, self.embedding_dim]))
+                self.embedding_dim, name=col+'_embedding')(user_input_features[col]), [-1, self.embedding_dim]))
         share_embedding_dict = {}
         for col in self.i_discrete_cols:
             le = self.le_dict[col]
             if col not in self.u_history_col_names:  # 该特征不在用户历史记录中
                 item_vector_list.append(tf.reshape(tf.keras.layers.Embedding(len(le.classes_)+10,
-                self.embedding_dim, name=col)(item_input_features[col]), [-1, self.embedding_dim]))
+                self.embedding_dim, name=col+'_embedding')(item_input_features[col]), [-1, self.embedding_dim]))
             else:
                 embedding_dim = int(len(le.classes_) ** 0.25) + 1  # 动态确定维度
-                embedding_layer = tf.keras.layers.Embedding(len(le.classes_)+10, embedding_dim, name=col)  # ItemId的embedding层用户和物品塔共用
+                embedding_layer = tf.keras.layers.Embedding(len(le.classes_)+10, embedding_dim, name=col+'_embedding')  # ItemId的embedding层用户和物品塔共用
                 share_embedding_dict[col] = embedding_layer
                 item_vector_list.append(tf.reshape(embedding_layer(item_input_features[col]), [-1, embedding_dim]))
 
@@ -104,26 +107,28 @@ class DSSM():
             item_col_name = self.u_history_col_names[i]
             le = self.le_dict[item_col_name]
             embedding_dim = int(len(le.classes_) ** 0.25) + 1  # 动态确定维度
-            lstm_out_dim = int((embedding_dim * self.ts_step)/2)
+            lstm_out_dim = int((embedding_dim * self.u_history_col_ts_step[self.u_history_cols[i]])/2)
 
             embedding_series = share_embedding_dict[item_col_name](user_input_features[self.u_history_cols[i]])
-            embedding_series = tf.keras.layers.BatchNormalization()(embedding_series)
+            # embedding_series = tf.keras.layers.BatchNormalization()(embedding_series)
             user_vector_list.append(tf.keras.layers.LSTM(units=lstm_out_dim)(embedding_series))
 
         user_embedding = tf.keras.layers.concatenate(user_vector_list, axis=1)
         item_embedding = tf.keras.layers.concatenate(item_vector_list, axis=1)
 
         for i in range(len(self.u_hidden_units[:-1])):
-            user_embedding = tf.keras.layers.BatchNormalization()(user_embedding)
+            # user_embedding = tf.keras.layers.BatchNormalization()(user_embedding)
             user_embedding = tf.keras.layers.Dense(self.u_hidden_units[i], activation=self.activation)(user_embedding)
             user_embedding = tf.keras.layers.Dropout(self.dropout)(user_embedding)
-        user_embedding = tf.keras.layers.Dense(self.u_hidden_units[-1], name='user_embedding', activation='tanh')(user_embedding)
+        user_embedding = tf.keras.layers.Dense(self.u_hidden_units[-1], name='user_embedding', activation='relu')(user_embedding)
+        # user_embedding = tf.keras.layers.BatchNormalization()(user_embedding)
 
         for i in range(len(self.i_hidden_units[:-1])):
-            item_embedding = tf.keras.layers.BatchNormalization()(item_embedding)
+            # item_embedding = tf.keras.layers.BatchNormalization()(item_embedding)
             item_embedding = tf.keras.layers.Dense(self.i_hidden_units[i], activation=self.activation)(item_embedding)
             item_embedding = tf.keras.layers.Dropout(self.dropout)(item_embedding)
-        item_embedding = tf.keras.layers.Dense(self.i_hidden_units[-1], name='item_embedding', activation='tanh')(item_embedding)
+        item_embedding = tf.keras.layers.Dense(self.i_hidden_units[-1], name='item_embedding', activation='relu')(item_embedding)
+        # item_embedding = tf.keras.layers.BatchNormalization()(item_embedding)
 
         # 双塔向量做内积输出
         output = tf.expand_dims(tf.reduce_sum(user_embedding * item_embedding, axis=1), 1)
@@ -139,6 +144,8 @@ class DSSM():
         self.model.compile(loss=loss, optimizer=optimizer, metrics=metrics, **kwargs)
         if summary:
             self.model.summary()
+        log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
     def fit_data(self, user_df: pd.DataFrame, item_df: pd.DataFrame, fill_na=0):
         """
@@ -178,7 +185,6 @@ class DSSM():
             user_df: 静态数据的Dataframe
             user_his_df: 时序数据的Dataframe
             u_id_col: 用户id列名
-            ts_step: 用户历史时间步长
         """
         if type(user_df) != pd.DataFrame or type(user_his_df) != pd.DataFrame:
             raise ValueError("Error: Input X data must be Pandas.DataFrame format.\n输入数据必须是Pandas DataFrame格式！")
@@ -210,8 +216,8 @@ class DSSM():
             user_batch_his_df[col] = le.transform(user_batch_his_df_tmp)
 
             user_batch_col_tmp = user_batch_his_df[[u_id_col, col]].groupby([u_id_col]) \
-                .apply(lambda x: np.pad(x[col].values, (self.ts_step - len(x[col].values), 0), 'constant',
-                        constant_values=constant_fill_na) if len(x[col].values) < self.ts_step else x[col].values)
+                .apply(lambda x: np.pad(x[col].values, (self.u_history_col_ts_step[col] - len(x[col].values), 0), 'constant',
+                        constant_values=constant_fill_na) if len(x[col].values) < self.u_history_col_ts_step[col] else x[col].values)
             user_batch_col_tmp = np.stack(user_batch_col_tmp.values)
             user_input.append(user_batch_col_tmp)
 
@@ -257,7 +263,6 @@ class DSSM():
             label_df: Y标签的Dataframe training为True时起作用
             u_id_col: user_id的列名
             i_id_col: item_id的列名
-            ts_step: 用户行为时序数据长度
             start_index: 本次批量的开始位置
             end_index: 本次批量的结束位置
             y_label: Y标签列名  training为True时起作用
@@ -314,8 +319,8 @@ class DSSM():
         for col in self.u_history_cols:
             constant_fill_na = dict(zip(le.classes_, le.transform(le.classes_)))[fill_na]  # 取出fill_na在编码后的值
             user_batch_col_tmp = user_batch_his_df[['id', col+str('_transformed')]].groupby(['id'])\
-                .apply(lambda x: np.pad(x[col+str('_transformed')].values, (self.ts_step-len(x[col+str('_transformed')].values), 0),'constant',
-                constant_values=constant_fill_na) if len(x[col+str('_transformed')].values) < self.ts_step else x[col+str('_transformed')].values)
+                .apply(lambda x: np.pad(x[col+str('_transformed')].values, (self.u_history_col_ts_step[col]-len(x[col+str('_transformed')].values), 0),'constant',
+                constant_values=constant_fill_na) if len(x[col+str('_transformed')].values) < self.u_history_col_ts_step[col] else x[col+str('_transformed')].values)
             user_batch_col_tmp = np.stack(user_batch_col_tmp.values)
             X_input.append(user_batch_col_tmp)
         print("用户历史记录特征处理完成")
@@ -341,7 +346,7 @@ class DSSM():
                 batch_size: 指定batch_size
                 validation_split: 验证集比例
                 callback: epoch结束后是否调用回调函数，计算模型效果指标
-            """
+        """
 
         class AUC_KS(Callback):
             def on_epoch_end(self, epoch, logs=None):
@@ -362,9 +367,9 @@ class DSSM():
                     print(' test_auc {:4f} test_ks {:4f}'.format(auc_score, ks))
 
         if callback:
-            metrit = [AUC_KS()]
+            metrit = [AUC_KS(), self.tensorboard_callback]
         else:
-            metrit = []
+            metrit = [self.tensorboard_callback]
         self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=validation_split,
                        callbacks=metrit, **kwargs)
 
@@ -395,7 +400,7 @@ class DSSM():
         params_dict = {'u_continue_cols': self.u_continue_cols, 'u_discrete_cols': self.u_discrete_cols,
                        'u_history_cols': self.u_history_cols, 'u_history_col_names': self.u_history_col_names,
                        'i_continue_cols': self.i_continue_cols, 'i_discrete_cols': self.i_discrete_cols,
-                       'ts_step': self.ts_step, 'le_dict': self.le_dict, 'scalar_dict': self.scalar_dict,
+                       'u_history_col_ts_step': self.u_history_col_ts_step, 'le_dict': self.le_dict, 'scalar_dict': self.scalar_dict,
                        'data_fitted': self.data_fitted, 'u_hidden_units': self.u_hidden_units,
                        'i_hidden_units': self.i_hidden_units, 'activation': self.activation, 'dropout': self.dropout,
                        'embedding_dim': self.embedding_dim, 'user_input_len': self.user_input_len,
@@ -409,7 +414,7 @@ class DSSM():
         self.u_history_col_names = params_dict['u_history_col_names']
         self.i_continue_cols = params_dict['i_continue_cols']
         self.i_discrete_cols = params_dict['i_discrete_cols']
-        self.ts_step = params_dict['ts_step']
+        self.u_history_col_ts_step = params_dict['u_history_col_ts_step']
         self.le_dict = params_dict['le_dict']
         self.scalar_dict = params_dict['scalar_dict']
         self.data_fitted = params_dict['data_fitted']
