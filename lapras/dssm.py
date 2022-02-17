@@ -42,7 +42,7 @@ class DSSM():
         self.model = self.u_hidden_units = self.i_hidden_units = self.activation = self.dropout = self.embedding_dim = \
             self.user_input_len = self.item_input_len = None
 
-    def compile(self, embedding_dim=4, u_hidden_units=[128,64,20], i_hidden_units=[64,32,20], activation='relu',
+    def compile(self, embedding_dim=4, u_hidden_units=[128,64,16], i_hidden_units=[64,32,16], activation='relu',
                  dropout=0.3, loss=tf.keras.losses.BinaryCrossentropy(),
                 optimizer=tf.keras.optimizers.Adam(1e-4),  metrics=[Precision(), AUC()], summary=True, **kwargs):
         """
