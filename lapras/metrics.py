@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from lapras.utils import count_point
 
 from sklearn.metrics import f1_score, roc_auc_score, roc_curve
 
@@ -244,7 +245,7 @@ def _PSI(test, base):
     return psi, frame.reset_index()
 
 
-def PSI(actual, predict, bins=10, return_frame=False):
+def PSI(actual, predict, bins=10, return_frame=False, **kwargs):
     """
     功能: 计算PSI值，并输出实际和预期占比分布曲线
     :param actual: Array或series，代表真实数据，如训练集模型得分
@@ -275,6 +276,50 @@ def PSI(actual, predict, bins=10, return_frame=False):
         return psi, psi_df
     else:
         return psi
+
+
+def PPSI(train_df, test_df, feature='', target='', bins=10, return_frame=False, **kwargs):
+    """
+    popularity predictive stability index
+    功能: 衡量特征预测稳定性的指标，
+    :param actual: Array或series，代表真实数据，如训练集模型得分
+    :param predict: Array或series，代表预期数据，如测试集模型得分
+    :param bins: 分段数
+    :param return_frame: 是否返回PSI 分箱详情
+    :return:
+        psi: float，PSI值
+        psi_df:DataFrame
+    """
+    actual_min = train_df[feature].min()  # 实际中的最小
+    actual_max = train_df[feature].max()  # 实际中的最大
+    binlen = (actual_max - actual_min) / bins
+    cuts = [actual_min + i * binlen for i in range(1, bins)]#设定分组
+    cuts.insert(0, -np.inf)
+    cuts.append(np.inf)
+
+    #  区间数量,区间Y标浓度
+    x, ticks, y_count, y_rate = count_point(train_df, cuts, feature, target, **kwargs)
+    x2, ticks2, y_count2, y_rate2 = count_point(test_df, cuts, feature, target, **kwargs)
+
+    actual_df = pd.DataFrame(y_count, columns=['actual_cnt'])
+    predict_df = pd.DataFrame(y_count2, columns=['predict_cnt'])
+    actual_df['actual_rate'] = y_rate
+    predict_df['predict_rate'] = y_rate2
+    ppsi_df = pd.merge(actual_df, predict_df, right_index=True, left_index=True)
+    # 防止rate为0引发计算问题
+    ppsi_df = ppsi_df.fillna(0)
+    ppsi_df.loc[ppsi_df['actual_rate'] == 0, 'actual_rate'] = 0.000001
+    ppsi_df.loc[ppsi_df['predict_rate'] == 0, 'predict_rate'] = 0.000001
+
+    ppsi_df['ppsi'] = (ppsi_df['actual_rate'] - ppsi_df['predict_rate']) * np.log(
+        ppsi_df['actual_rate'] / ppsi_df['predict_rate'])
+    ppsi = ppsi_df['ppsi'].sum()
+
+    if return_frame:
+        return ppsi, ppsi_df
+    else:
+        return ppsi
+
 
 
 def CAL_PSI(test, base, combiner = None, return_frame = False):

@@ -20,7 +20,7 @@ FACTOR_UNKNOWN = 'UNKNOWN'
 
 class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
     def __init__(self, pdo = 40, rate = 2, base_odds = 1/60, base_score = 600,
-        card = None, combiner = {}, transfer = None, solver='ols', **kwargs):
+        card = None, combiner = {}, transfer = None, model_type='lr', **kwargs):
         """
 
         Args:
@@ -29,8 +29,7 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
             transfer (toad.WOETransformer)
             # self.offset = 363.7244
             # self.factor = 57.7078
-            # self.solver = 57.7078
-            solver: lbfgs or ols
+            model_type: lr or ols  lr:sklearn.LogisticRegression   ols:statsmodels.ols
         """
         self.pdo = pdo
         self.rate = rate
@@ -42,12 +41,12 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
 
         self._combiner = combiner
         self.transfer = transfer
-        self.solver = solver
+        self.model_type = model_type
 
-        if self.solver == 'ols':
+        if self.model_type == 'ols':
             self.model = sma
         else:
-            self.model = LogisticRegression(solver='lbfgs', **kwargs)
+            self.model = LogisticRegression(**kwargs)
 
         self._feature_names = None
 
@@ -67,14 +66,14 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
     def coef_(self):
         """ coef of LR code
         """
-        if self.solver == 'ols':
+        if self.model_type == 'ols':
             return self.model.params[1:]
         else:
             return self.model.coef_[0]
     
     @property
     def intercept_(self):
-        if self.solver == 'ols':
+        if self.model_type == 'ols':
             return self.model.params[0]
         else:
             return self.model.intercept_[0]
@@ -115,7 +114,7 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
             if f not in self.transfer:
                 raise Exception('column \'{f}\' is not in transfer'.format(f = f))
 
-        if self.solver == 'ols':
+        if self.model_type == 'ols':
             # 增加常数项,截距
             X = sma.add_constant(X)
             self.model = self.model.Logit(y, X).fit()
@@ -138,7 +137,7 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
             DataFrame: sub score for each feature
         """
 
-        if self.solver == 'ols':
+        if self.model_type == 'ols':
             X = sma.add_constant(X)
             prob = self.model.predict(X)
         else:
@@ -151,7 +150,7 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
 
     def predict_prob(self, X, **kwargs):
 
-        if self.solver == 'ols':
+        if self.model_type == 'ols':
             X = sma.add_constant(X)
             prob = self.model.predict(X)
         else:

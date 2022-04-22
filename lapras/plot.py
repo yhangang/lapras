@@ -124,14 +124,14 @@ def score_plot(frame, score='score', target='target',score_bond=None, **kwargs):
         score_bond[-1] = max_value
 
     # 计算 区间数量 区间坏账率
-    x, ticks, y_count, y_rate = count_point(frame, score_bond, score, target)
+    x, ticks, y_count, y_rate = count_point(frame, score_bond, score, target, **kwargs)
 
     # 画图显示 区间数量 区间坏账率
     plt_show(x, ticks, y_count, y_rate, **kwargs)
 
 
 def plt_show(x, ticks, y_count, y_rate, title="Score Distribute And Bad Rate", x_label="Score Bonds",
-             y_label_left="Sample Counts", y_label_right="Bad Rates", fontsize=15):
+             y_label_left="Sample Counts", y_label_right="Bad Rates", fontsize=15, output=False):
     '''
     画 柱状图 和 折线图
     :param x: 区间分段 1,2,3,4

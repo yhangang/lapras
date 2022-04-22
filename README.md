@@ -7,7 +7,7 @@
 
 
 
-Lapras is developed to facilitate the dichotomy model development work.
+Lapras is developed to facilitate the model developing work.
 
 ## Usage
 Lapras is designed to develop standard scorecard model. It contains the main steps as follows:  

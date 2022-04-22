@@ -408,7 +408,7 @@ def get_dummies(dataframe, exclude = None, binary_drop = False, **kwargs):
     return data
 
 
-def count_point(frame, score_bond, score='score', target='bad'):
+def count_point(frame, score_bond, score='score', target='bad', output=False):
     '''
     包含 y base_score 字段
     y 为表现 base_score 为 评分
@@ -432,14 +432,11 @@ def count_point(frame, score_bond, score='score', target='bad'):
     bad_count = badstat_result.tolist()
     good_count = goodstat_result.tolist()
     y_count = allstat_result.tolist()
-    print('bad: %s' % bad_count)
-    print('good: %s' % good_count)
-    print('all: %s' % y_count)
+
     all_rate = ['%.2f%%'%(y_c/sum(y_count) *100) for y_c in y_count]
-    print('all_rate: %s' % all_rate)
 
     # 计算区间坏账率
-    ticks =  ['(%d,%d]' % (score_bond[i], score_bond[i+1]) for (i,x) in enumerate(score_bond) if i<len(score_bond)-1]
+    ticks =  ['(%s,%s]' % (score_bond[i], score_bond[i+1]) for (i,x) in enumerate(score_bond) if i<len(score_bond)-1]
     score_stat_df = pd.DataFrame({'labels':labels,'bad_count':bad_count,'good_count':good_count,'y_count':y_count})
     # score_stat_df['ratio'] = score_stat_df['bad_count']/(score_stat_df['good_count']+score_stat_df['bad_count'])
     score_stat_df['y_rate'] = score_stat_df['bad_count']/(score_stat_df['y_count'])
@@ -447,8 +444,15 @@ def count_point(frame, score_bond, score='score', target='bad'):
     x = score_stat_df['labels']
     y_rate = score_stat_df['y_rate']
     y_rate_cent = ['%.2f%%'%(y_i *100) for y_i in list(y_rate)]
-    print ('bad_rate: %s'%(y_rate_cent))
+
     base_score_count = Counter(list(scoredata[score]))
+    if output:
+        print('bad: %s' % bad_count)
+        print('good: %s' % good_count)
+        print('all: %s' % y_count)
+        print('all_rate: %s' % all_rate)
+        print('bad_rate: %s' % y_rate_cent)
+
     # print ('重复分重复次数排序（前15个） %s'%base_score_count.most_common()[:15])
     # x: 区间分段 1,2,3,4
     # ticks: 区间名称['[300, 400)', '[400, 500)',  '[500, 1000)']

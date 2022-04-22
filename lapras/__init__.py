@@ -4,7 +4,7 @@ from .detector import detect
 from .stats import quality, IV, VIF, WOE, bin_stats
 from .selection import select, stepwise
 from .transform import Combiner, WOETransformer
-from .metrics import KS, PSI, AUC, KS_bucket
+from .metrics import KS, PSI, AUC, KS_bucket, PPSI
 from .plot import bin_plot, score_plot, radar_plot
 from .scorecard import ScoreCard
 # from .widedeepbinary import WideDeepBinary
