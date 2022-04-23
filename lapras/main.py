@@ -2,6 +2,7 @@
 
 import pandas as pd
 import lapras
+import numpy as np
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
@@ -53,14 +54,13 @@ transfer = lapras.WOETransformer()
 train_woe = transfer.fit_transform(c.transform(train_selected), train_selected[target], exclude=[target])
 # print(train_woe)
 # print("PSI:%s" % lapras.PSI(df['age'], df['age']))
-print("PPSI:", lapras.PPSI(df, df, feature='age', target=target, return_frame=True))
+print("PPSI:", lapras.PPSI(df, df, feature='bad', target=target, return_frame=True))
 
 # 将woe转化后的数据做逐步回归
 final_data = lapras.stepwise(train_woe,target = target, estimator='ols', direction = 'both', criterion = 'aic', exclude = [])
 
 # print(final_data.columns)
 # final_data = train_woe
-
 
 card = lapras.ScoreCard(
     combiner = c,
@@ -82,7 +82,7 @@ print(card.export())
 # print(lapras.F1(prob,final_data[target]))
 # lapras.perform(prob,final_data[target])
 # score_bond = [305, 460, 490, 520, 550, 580, 610, 640, 670, 700, 730, 760, 790, 820, 850, 880, 999]
-lapras.score_plot(final_data,score='score', target=target, output=True)
+# lapras.score_plot(final_data,score='score', target=target, output=True)
 # print(lapras.LIFT(prob,final_data[target]))
 
 # print(lapras.KS_bucket(final_data['score'], final_data[target], bucket=10, method = 'quantile'))

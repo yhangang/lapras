@@ -245,23 +245,31 @@ def _PSI(test, base):
     return psi, frame.reset_index()
 
 
-def PSI(actual, predict, bins=10, return_frame=False, **kwargs):
+def PSI(actual, predict, bins=10, method='step', return_frame=False, **kwargs):
     """
     功能: 计算PSI值，并输出实际和预期占比分布曲线
     :param actual: Array或series，代表真实数据，如训练集模型得分
     :param predict: Array或series，代表预期数据，如测试集模型得分
     :param bins: 分段数
+    :param method: 'quantile': 等频划分  'step': 等距划分
     :param return_frame: 是否返回PSI 分箱详情
     :return:
         psi: float，PSI值
         psi_df:DataFrame
     """
-    actual_min = actual.min()  # 实际中的最小概率
-    actual_max = actual.max()  # 实际中的最大概率
-    binlen = (actual_max - actual_min) / bins
-    cuts = [actual_min + i * binlen for i in range(1, bins)]#设定分组
-    cuts.insert(0, -float("inf"))
-    cuts.append(float("inf"))
+    if method == 'step':
+        actual_min = actual.min()  # 实际中的最小概率
+        actual_max = actual.max()  # 实际中的最大概率
+        binlen = (actual_max - actual_min) / bins
+        cuts = [actual_min + i * binlen for i in range(1, bins)]  # 设定分组
+        cuts.insert(0, -float("inf"))
+        cuts.append(float("inf"))
+    else:
+        q = np.arange(0, 1, 1/bins)[1:]
+        cuts = list(np.unique(np.quantile(fillna(actual, actual.mean()), q)))
+        cuts.insert(0, -np.inf)
+        cuts.append(np.inf)
+
     actual_cuts = np.histogram(actual, bins=cuts)#将actual等宽分箱
     predict_cuts = np.histogram(predict, bins=cuts)#将predict按actual的分组分箱
     actual_df = pd.DataFrame(actual_cuts[0],columns=['actual'])
@@ -290,10 +298,8 @@ def PPSI(train_df, test_df, feature='', target='', bins=10, return_frame=False, 
         psi: float，PSI值
         psi_df:DataFrame
     """
-    actual_min = train_df[feature].min()  # 实际中的最小
-    actual_max = train_df[feature].max()  # 实际中的最大
-    binlen = (actual_max - actual_min) / bins
-    cuts = [actual_min + i * binlen for i in range(1, bins)]#设定分组
+    q = np.arange(0, 1, 1/bins)[1:]
+    cuts = list(np.unique(np.quantile(fillna(train_df[feature], train_df[feature].mean()), q)))
     cuts.insert(0, -np.inf)
     cuts.append(np.inf)
 
@@ -396,3 +402,12 @@ def matrix(y_pred, y, splits = None):
         columns = pd.Index(labels, name = 'Predicted'),
     )
 
+def fillna(feature, by = -1):
+    # copy array
+    copied = np.copy(feature)
+
+    mask = pd.isna(copied)
+
+    copied[mask] = by
+
+    return copied
