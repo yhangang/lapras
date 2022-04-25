@@ -245,7 +245,7 @@ def _PSI(test, base):
     return psi, frame.reset_index()
 
 
-def PSI(actual, predict, bins=10, method='step', return_frame=False, **kwargs):
+def PSI(actual, predict, bins=10, method='quantile', return_frame=False, **kwargs):
     """
     功能: 计算PSI值，并输出实际和预期占比分布曲线
     :param actual: Array或series，代表真实数据，如训练集模型得分
@@ -257,18 +257,18 @@ def PSI(actual, predict, bins=10, method='step', return_frame=False, **kwargs):
         psi: float，PSI值
         psi_df:DataFrame
     """
-    if method == 'step':
+    if method == 'quantile':
+        q = np.arange(0, 1, 1 / bins)[1:]
+        cuts = list(np.unique(np.quantile(fillna(actual, actual.mean()), q)))
+        cuts.insert(0, -np.inf)
+        cuts.append(np.inf)
+    else:
         actual_min = actual.min()  # 实际中的最小概率
         actual_max = actual.max()  # 实际中的最大概率
         binlen = (actual_max - actual_min) / bins
         cuts = [actual_min + i * binlen for i in range(1, bins)]  # 设定分组
         cuts.insert(0, -float("inf"))
         cuts.append(float("inf"))
-    else:
-        q = np.arange(0, 1, 1/bins)[1:]
-        cuts = list(np.unique(np.quantile(fillna(actual, actual.mean()), q)))
-        cuts.insert(0, -np.inf)
-        cuts.append(np.inf)
 
     actual_cuts = np.histogram(actual, bins=cuts)#将actual等宽分箱
     predict_cuts = np.histogram(predict, bins=cuts)#将predict按actual的分组分箱
