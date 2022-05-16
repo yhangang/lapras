@@ -7,21 +7,26 @@
 
 
 
-Lapras is developed to facilitate the model developing work.
+Lapras is designed to make the model developing work easily and conveniently.
+It contains these functions below in one key operation: data exploratory analysis, feature selection, feature binning, 
+data visualization, scorecard modeling(a logistic regression model with excellent interpretability), performance measure.
+
+
+Let's get started.
 
 ## Usage
-Lapras is designed to develop standard scorecard model. It contains the main steps as follows:  
 1.Exploratory Data Analysis  
 lapras.detect()  
 lapras.quality()  
 lapras.IV()  
 lapras.VIF()  
+lapras.PSI()  
 
 2.Feature Selection  
 lapras.select()  
 lapras.stepwise()  
 
-3.Binnings  
+3.Binning  
 lapras.Combiner()  
 lapras.WOETransformer()  
 lapras.bin_stats()  
@@ -35,14 +40,15 @@ lapras.perform()
 lapras.LIFT()  
 lapras.score_plot()  
 lapras.KS_bucket()  
-lapras.PSI()  
+lapras.PPSI()  
 lapras.KS()  
 lapras.AUC()  
 
-Also lapras provides a function which runs all the steps above automaticly:  
+6.One Key Auto Modeling
+Lapras also provides a function which runs all the steps above automatically:  
 lapras.auto_model()  
 
-For detailed usage, please refer to the wiki. Enjoy.  
+For more details, please refer to the wiki page. Enjoy.  
 
 
 ## Install

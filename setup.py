@@ -10,11 +10,11 @@ setup(
     version='0.0.18',
     packages = find_packages(),
 
-    description='scorecard',
+    description='scorecard,model',
     long_description=open(filepath).read(),
     long_description_content_type='text/markdown',
     url='https://github.com/yhangang/lapras',
-    author='Badtom',
+    author='Hayden Yang',
     author_email='yhangang@gmail.com',
     license='MIT',
     python_requires='>=3.5',
