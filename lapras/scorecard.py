@@ -17,10 +17,8 @@ FACTOR_EMPTY = 'MISSING'
 FACTOR_UNKNOWN = 'UNKNOWN'
 
 
-
 class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
-    def __init__(self, pdo = 40, rate = 2, base_odds = 1/60, base_score = 600,
-        card = None, combiner = {}, transfer = None, model_type='lr', **kwargs):
+    def __init__(self, pdo = 40, rate = 2, base_odds = 1/60, base_score = 600, card = None, combiner = {}, transfer = None, model_type='lr', **kwargs):
         """
 
         Args:
