@@ -44,7 +44,7 @@ lapras.PPSI()
 lapras.KS()  
 lapras.AUC()  
 
-6.One Key Auto Modeling
+6.One Key Auto Modeling  
 Lapras also provides a function which runs all the steps above automatically:  
 lapras.auto_model()  
 
