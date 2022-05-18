@@ -66,9 +66,9 @@ class WideDeepBinary():
         # 定义输入格式
         input_features = OrderedDict()
 
-        input_features['input_rnn_continue'] = tf.keras.layers.Input(shape=(self.ts_step, len(self.rnn_continue_X_cols)))  # 连续时间序列数据
+        input_features['input_rnn_continue'] = tf.keras.layers.Input(shape=(self.ts_step, len(self.rnn_continue_X_cols)), name='input_rnn_continue')  # 连续时间序列数据
         if self.static_continue_X_cols:
-            input_features['input_static_continue'] = tf.keras.layers.Input(shape=len(self.static_continue_X_cols))  # 连续静态数据
+            input_features['input_static_continue'] = tf.keras.layers.Input(shape=len(self.static_continue_X_cols), name='input_static_continue')  # 连续静态数据
         for col in self.static_discrete_X_cols:
             input_features[col] = tf.keras.layers.Input(shape=1, name=col)  # 静态离散特征
 
