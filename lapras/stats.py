@@ -137,7 +137,7 @@ def VIF(frame):
 
         pre_y = model.predict(X)
 
-        vif[i] = np.sum(y ** 2) / np.sum((pre_y - y) ** 2)
+        vif[i] = np.sum((y - np.mean(y)) ** 2) / np.sum((pre_y - y) ** 2)
     
     return pd.Series(vif, index = index)
 

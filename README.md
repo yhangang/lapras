@@ -80,7 +80,7 @@ install_requires = [
 
 
 
-[pypi-image]: https://img.shields.io/badge/pypi-V0.0.18-%3Cgreen%3E
+[pypi-image]: https://img.shields.io/badge/pypi-V0.0.19-%3Cgreen%3E
 [pypi-url]: https://github.com/yhangang/lapras
 [python-image]: https://img.shields.io/pypi/pyversions/toad.svg?style=flat-square
 [docs-url]: https://github.com/yhangang/lapras
