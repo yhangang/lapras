@@ -176,8 +176,6 @@ def KMeansMerge(feature, target = None, nan = -1, n_bins = None, random_state = 
     return splits.round(4)
 
 
-
-
 @support_dataframe(require_target = False)
 def merge(feature, target = None, method = 'dt', return_splits = False, **kwargs):
     """merge feature into groups
@@ -188,8 +186,6 @@ def merge(feature, target = None, method = 'dt', return_splits = False, **kwargs
         method (str): 'dt', 'chi', 'quantile', 'step', 'kmeans' - the strategy to be used to merge feature
         return_splits (bool): if needs to return splits
         n_bins (int): n groups that will be merged into
-
-
     Returns:
         array: a array of merged label with the same size of feature
         array: list of split points
@@ -209,7 +205,6 @@ def merge(feature, target = None, method = 'dt', return_splits = False, **kwargs
         splits = KMeansMerge(feature, target=target, **kwargs)
     else:
         splits = np.empty(shape=(0,))
-
 
     if len(splits):
         bins = bin_by_splits(feature, splits)
