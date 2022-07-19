@@ -41,9 +41,10 @@ def MonoMerge(feature, target, n_bins=None, min_samples=10):
         return bins
 
     else:
-        bins = list(set(t.bins))
+        bins = list(t.bins)
         bins.pop(0) # 删除分箱两边的边界值
         bins.pop(-1) # 删除分箱两边的边界值
+        bins = list(set(bins))
 
         # 结果取4位小数
         thresholds = np.array(bins)
