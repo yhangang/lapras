@@ -18,7 +18,7 @@ FACTOR_UNKNOWN = 'UNKNOWN'
 
 
 class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
-    def __init__(self, pdo = 40, rate = 2, base_odds = 1/60, base_score = 600, card = None, combiner = {}, transfer = None, model_type='lr', **kwargs):
+    def __init__(self, pdo = 40, rate = 2, base_odds = 1/60, base_score = 600, combiner = {}, transfer = None, model_type='lr', **kwargs):
         """
 
         Args:
@@ -48,17 +48,6 @@ class ScoreCard(BaseEstimator, RulesMixin, BinsMixin):
 
         self._feature_names = None
 
-        if card is not None:
-            # self.generate_card(card = card)
-            import warnings
-            warnings.warn(
-                """`ScoreCard(card = {.....})` will be deprecated soon,
-                    use `ScoreCard().load({.....})` instead!
-                """,
-                DeprecationWarning,
-            )
-
-            self.load(card)
         
     @property
     def coef_(self):

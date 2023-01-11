@@ -7,7 +7,7 @@ filepath = 'README.md'
 
 setup(
     name='lapras',
-    version='0.0.19',
+    version='0.0.20',
     packages = find_packages(),
 
     description='scorecard,model',

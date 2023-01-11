@@ -96,4 +96,3 @@ print(card.export())
 #     print(card.export())
 
 # lapras.radar_plot([0.1,0.2,0.3,0.8,0.5],title='is am are',radar_labels=['111','222','333','444','请问'])
-
