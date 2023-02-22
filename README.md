@@ -88,12 +88,6 @@ import math
 ```
 
 ```python
-lapras.__version__
-```
-```python
-'0.0.21'
-```
-```python
 # Read in data file
 df = pd.read_csv('data/demo.csv',encoding="utf-8")
 ```
