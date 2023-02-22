@@ -79,11 +79,10 @@ final_data['prob'] = prob
 # print(final_data[['score', 'prob']].iloc[:10,:])
 #输出标准评分卡
 print(card.export())
-# print(lapras.F1(prob,final_data[target]))
-# lapras.perform(prob,final_data[target])
-# score_bond = [305, 460, 490, 520, 550, 580, 610, 640, 670, 700, 730, 760, 790, 820, 850, 880, 999]
-# lapras.score_plot(final_data,score='score', target=target, output=True)
-# print(lapras.LIFT(prob,final_data[target]))
+lapras.perform(prob,final_data[target])
+score_bond = [305, 460, 490, 520, 550, 580, 610, 640, 670, 700, 730, 760, 790, 820, 850, 880, 999]
+lapras.score_plot(final_data,score='score', target=target, output=True)
+print(lapras.LIFT(prob,final_data[target]))
 
 # print(lapras.KS_bucket(final_data['score'], final_data[target], bucket=10, method = 'quantile'))
 

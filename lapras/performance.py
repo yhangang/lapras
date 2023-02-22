@@ -73,29 +73,29 @@ def perform(feature=None, target=None):
     # plt.legend(('train_set', 'test_set', 'OOT1', 'OOT2', 'OOT3'), loc='lower right')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('ROC Line')
-    plt.plot(fpr[:-1], tpr[:-1])
+    plt.title('ROC Curve')
+    plt.plot(fpr[:], tpr[:])
     plt.show()
 
     # 绘制KS曲线
-    x_axis = [i / len(tpr[:-1]) for i in range(len(tpr[:-1]))]
+    x_axis = [i / len(tpr[:]) for i in range(len(tpr[:]))]
     position = np.argmax(tpr - fpr)
-    plot_position = position / len(tpr[:-1])
-    plt.plot(x_axis, tpr[:-1])
-    plt.plot(x_axis, fpr[:-1])
+    plot_position = position / len(tpr[:])
+    plt.plot(x_axis, tpr[:])
+    plt.plot(x_axis, fpr[:])
     plt.plot([plot_position, plot_position], [tpr[position], fpr[position]])
     plt.legend(('True Positive', 'False Positive', 'Max Ks Gap'), loc='upper left')
     plt.xlabel('Percent')
     plt.ylabel('Rate')
     plt.text(0.5, 0.5, 'ks=' + str(round(ks, 3)))
-    plt.title('KS Line')
+    plt.title('KS Curve')
     plt.show()
 
     # 绘制PR曲线
-    plt.plot(recalls[:-1], precisions[:-1])
+    plt.plot(recalls[:], precisions[:])
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.title('PR Line')
+    plt.title('PR Curve')
     plt.show()
 
 

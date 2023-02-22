@@ -130,15 +130,15 @@ def score_plot(frame, score='score', target='target',score_bond=None, **kwargs):
     plt_show(x, ticks, y_count, y_rate, **kwargs)
 
 
-def plt_show(x, ticks, y_count, y_rate, title="Score Distribute And Bad Rate", x_label="Score Bonds",
-             y_label_left="Sample Counts", y_label_right="Bad Rates", fontsize=15, output=False):
+def plt_show(x, ticks, y_count, y_rate, title="Score Distribute And Y Label Rates", x_label="Score Boundaries",
+             y_label_left="Sample Counts", y_label_right="Y Label Rates", fontsize=15, output=False):
     '''
     画 柱状图 和 折线图
     :param x: 区间分段 1,2,3,4
     :param ticks: 区间名称['[300, 400)', '[400, 500)',  '[500, 1000)']
     :param y_count: 区间 数量， 表示评分在此区间内的样本数量
     :param y_rate: 区间 坏账率
-    :param graph_title: 图表标题
+    :param title: 图表标题
     :param x_label: 横坐标标题
     :param y_label_left: 左边从坐标标题
     :param y_label_right: 右边从坐标标题
