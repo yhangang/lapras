@@ -1181,8 +1181,10 @@ card.coef_:[0.32080944 0.3452988  0.68294643 0.66842902]
 # target=None actual label
 lapras.perform(prob,final_result[target])
 ```
+```python
 KS: 0.4160
 AUC: 0.7602
+```
 ![png](http://img.badtom.cn/output_19_1.png)
 
 ![png](http://img.badtom.cn/output_19_2.png)
@@ -1203,8 +1205,9 @@ good: [129, 249, 494, 795, 1075, 972, 825, 282, 164, 114]
 all: [171, 327, 564, 899, 1136, 1000, 843, 283, 165, 114]
 all_rate: ['3.11%', '5.94%', '10.25%', '16.34%', '20.65%', '18.18%', '15.32%', '5.14%', '3.00%', '2.07%']
 bad_rate: ['24.56%', '23.85%', '12.41%', '11.57%', '5.37%', '2.80%', '2.14%', '0.35%', '0.61%', '0.00%']
-![png](http://img.badtom.cn/output_20_1.png)
 ```
+![png](http://img.badtom.cn/output_20_1.png)
+
 ```python
 # LIFT show
 # feature=None predicted value
