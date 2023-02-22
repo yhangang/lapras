@@ -18,14 +18,14 @@ def auto_model(df, target='target',to_drop=['id'], empty = 0.95, iv = 0.02, corr
 
     start_time = datetime.now()
     # 变量筛选
-    print("——开始初步筛选变量——")
+    print("——data filtering——")
     train_selected, dropped = lapras.select(df.drop(to_drop, axis=1), target=target, empty=empty, \
                                             iv=iv, corr=corr, vif=vif, return_drop=True, exclude=[])
-    print("原始特征数：%s  筛选后特征数：%s" % (len(df.drop(to_drop, axis=1).columns)-1, len(train_selected.columns)-1))
+    print("original feature：%s  filtered features：%s" % (len(df.drop(to_drop, axis=1).columns)-1, len(train_selected.columns)-1))
 
     # 变量分箱
     print()
-    print("——开始变量分箱——")
+    print("——feature binning——")
     c = lapras.Combiner()
     c.fit(train_selected, y=target, method=method, min_samples=min_samples, n_bins=n_bins)
     if bins_show:
@@ -40,16 +40,16 @@ def auto_model(df, target='target',to_drop=['id'], empty = 0.95, iv = 0.02, corr
 
     # 转换为WOE值
     print()
-    print("——原始变量转换为WOE值——")
+    print("——WOE value transformation——")
     transfer = lapras.WOETransformer()
     train_woe = transfer.fit_transform(c.transform(train_selected), train_selected[target], exclude=[target])
 
     # 再次变量筛选
     print()
-    print("——再次筛选变量——")
+    print("——feature filtering once more——")
     train_woe2, dropped = lapras.select(train_woe, target=target, empty=empty, \
                                             iv=iv, corr=corr, vif=vif, return_drop=True, exclude=[])
-    print("原始特征数：%s  筛选后特征数：%s" % (len(train_woe.columns) - 1, len(train_woe2.columns) - 1))
+    print("original feature：%s  filtered features：%s" % (len(train_woe.columns) - 1, len(train_woe2.columns) - 1))
     # 将woe转化后的数据做逐步回归
     # final_data = lapras.stepwise(train_woe, target=target, estimator='ols', direction='forward', criterion='aic',
     #                              exclude=[])
@@ -57,7 +57,7 @@ def auto_model(df, target='target',to_drop=['id'], empty = 0.95, iv = 0.02, corr
 
     # 评分卡建模
     print()
-    print("——评分卡建模——")
+    print("——scorecard modeling——")
 
     model_cols = []
     if coef_negative == False:
@@ -94,7 +94,7 @@ def auto_model(df, target='target',to_drop=['id'], empty = 0.95, iv = 0.02, corr
 
     # 输出模型效果
     print()
-    print("——模型效果输出——")
+    print("——model performance metrics——")
     score = card.predict(final_data[model_cols])
     prob = card.predict_prob(final_data[model_cols])
     final_data['score'] = score
@@ -109,7 +109,7 @@ def auto_model(df, target='target',to_drop=['id'], empty = 0.95, iv = 0.02, corr
 
     end_time = datetime.now()
     print()
-    print("自动化建模完成,耗时：%s秒" % str((end_time - start_time).seconds))
+    print("Automatic modeling finished, time costing： %s second" % str((end_time - start_time).seconds))
     return card
 
 
