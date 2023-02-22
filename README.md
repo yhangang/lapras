@@ -44,7 +44,6 @@ lapras.AUC()
 Lapras also provides a function which runs all the steps above automatically:
 lapras.auto_model()
 
-For more details, please refer to the wiki page. Enjoy.
 
 ## Install
 

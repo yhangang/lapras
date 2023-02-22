@@ -114,7 +114,7 @@ def LIFT(feature=None, target=None, recall_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6,
     lift_df = []
     for recall in recall_list:
         index = np.argmin(np.abs(recalls - recall))
-        lift_df.append([recall,precisions[index], precisions[index]/precisions[0]])
+        lift_df.append([recall,precisions[index], precisions[index]/target.mean()])
     lift_df = pd.DataFrame(lift_df, columns=columns)
     return lift_df
 
