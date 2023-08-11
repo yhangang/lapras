@@ -1,7 +1,7 @@
 # LAPRAS
 
-[![PyPi version][pypi-image]][pypi-url]
-[![Python version][python-image]][docs-url]
+[PyPi version][pypi-url]
+[Python version][docs-url]
 
 Lapras is designed to make the model developing job easily and conveniently.
 It contains these functions below in one key operation: data exploratory analysis, feature selection, feature binning,
@@ -43,7 +43,6 @@ lapras.AUC()
 6.One Key Auto Modeling
 Lapras also provides a function which runs all the steps above automatically:
 lapras.auto_model()
-
 
 ## Install
 
@@ -333,6 +332,7 @@ for col in cols:
     if col not in [target]:
         print("%s: %.4f" % (col,lapras.PSI(train_df[col], test_df[col])))
 ```
+
 ```python
 score: 0.1500
 age: 0.0147
@@ -342,12 +342,14 @@ max_unpay_day: 0.0042
 id: 0.0000
 period: 0.0030
 ```
+
 ```python
 # Calculate VIF
 # Parameter details：
 # dataframe=None 
 lapras.VIF(train_df.drop(['id','bad'],axis=1))
 ```
+
 ```python
 wealth            1.124927
 max_unpay_day     2.205619
@@ -357,6 +359,7 @@ period            1.193605
 education         1.090158
 dtype: float64
 ```
+
 ```python
 # Calculate IV value
 # Parameter details：
@@ -364,9 +367,11 @@ dtype: float64
 # target=None Y label data
 lapras.IV(train_df['age'],train_df[target])
 ```
+
 ```python
 0.5045879202656338
 ```
+
 ```python
 # Features filtering
 # Parameter details：
@@ -384,10 +389,12 @@ print(dropped)
 print(train_selected.shape)
 train_selected
 ```
+
 ```python
 {'empty': array([], dtype=float64), 'iv': array([], dtype=object), 'corr': array([], dtype=object)}
 (5502, 7)
 ```
+
 <div>
 
 <table border="1" class="dataframe">
@@ -539,6 +546,7 @@ c.fit(train_selected, y = target,method = 'mono', min_samples = 0.05,n_bins=8) #
 # #  'wealth': [2.5, 3.5, 6.5]})
 c.export()
 ```
+
 ```python
 {'age': [23.0, 24.0, 25.0, 26.0, 28.0, 29.0, 37.0],
 'education': [3.0, 4.0],
@@ -547,6 +555,7 @@ c.export()
 'score': [237.0, 272.0, 288.0, 296.0, 330.0, 354.0, 384.0],
 'wealth': [3.0, 4.0, 5.0, 7.0]}
 ```
+
 ```python
 # To transform the original data into binning data
 # Parameter details：
@@ -689,6 +698,7 @@ for col in cols:
         print(lapras.bin_stats(c.transform(train_selected[[col, target]], labels=True), col=col, target=target))
         lapras.bin_plot(c.transform(train_selected[[col,target]], labels=True), col=col, target=target)
 ```
+
 ```python
           score  bad_count  total_count  bad_rate     ratio       woe  \
 0   00.[-inf,237.0)        136          805  0.168944  0.146310  0.944734
@@ -710,7 +720,9 @@ for col in cols:
 6  0.150450  0.735116
 7  0.160788  0.735116
 ```
-![png](http://img.badtom.cn/output_13_1.png)
+
+![png](img/output_13_1.png)
+
 ```python
           age  bad_count  total_count  bad_rate     ratio       woe  \
 0  00.[-inf,23.0)         90          497  0.181087  0.090331  1.028860
@@ -732,7 +744,9 @@ for col in cols:
 6  0.137334   0.45579
 7  0.062060   0.45579
 ```
-![png](http://img.badtom.cn/output_13_3.png)
+
+![png](img/output_13_3.png)
+
 ```python
       wealth  bad_count  total_count  bad_rate     ratio       woe  \
 0  00.[-inf,3.0)        106          593  0.178752  0.107779  1.013038
@@ -749,7 +763,8 @@ for col in cols:
 4  0.033612  0.236205
 ```
 
-![png](http://img.badtom.cn/output_13_5.png)
+![png](img/output_13_5.png)
+
 ```python
    education  bad_count  total_count  bad_rate     ratio       woe  \
 0  00.[-inf,3.0)        225         2123  0.105982  0.385860  0.405408
@@ -761,7 +776,9 @@ for col in cols:
 1  0.009920  0.211775
 2  0.126415  0.211775
 ```
-![png](http://img.badtom.cn/output_13_7.png)
+
+![png](img/output_13_7.png)
+
 ```python
  max_unpay_day  bad_count  total_count  bad_rate     ratio       woe  \
 0  00.[-inf,171.0)        330         5098  0.064731  0.926572 -0.132726
@@ -771,7 +788,9 @@ for col in cols:
 0  0.015426  0.134699
 1  0.119272  0.134699
 ```
-![png](http://img.badtom.cn/output_13_9.png)
+
+![png](img/output_13_9.png)
+
 ```python
       period  bad_count  total_count  bad_rate     ratio       woe  \
 0  00.[-inf,6.0)         52         1158  0.044905  0.210469 -0.519398
@@ -783,7 +802,8 @@ for col in cols:
 1  0.000803  0.061758
 2  0.015314  0.061758
 ```
-![png](http://img.badtom.cn/output_13_11.png)
+
+![png](img/output_13_11.png)
 
 ```python
 # WOE value transformation
@@ -804,6 +824,7 @@ transfer.fit(c.transform(train_selected), train_selected[target], exclude=[targe
 train_woe = transfer.transform(c.transform(train_selected))
 transfer.export()
 ```
+
 ```python
 {'age': {0: 1.0288596439961428,
 1: 0.7858440185299318,
@@ -834,6 +855,7 @@ transfer.export()
 3: -0.2658032661768855,
 4: -0.6142151848362123}}
 ```
+
 ```python
 # Features filtering could be done once more after transformed into WOE value. This is optional.
 train_woe, dropped = lapras.select(train_woe,target = target, empty = 0.9, \
@@ -842,10 +864,12 @@ print(dropped)
 print(train_woe.shape)
 train_woe.head(10)
 ```
+
 ```python
 {'empty': array([], dtype=float64), 'iv': array([], dtype=object), 'corr': array([], dtype=object)}
 (5502, 7)
 ```
+
 <div>
 
 <table border="1" class="dataframe">
@@ -980,6 +1004,7 @@ train_woe.head(10)
 final_data = lapras.stepwise(train_woe,target = target, estimator='ols', direction = 'both', criterion = 'aic', exclude = [])
 final_data
 ```
+
 <div>
 
 <table border="1" class="dataframe">
@@ -1106,12 +1131,14 @@ col = list(final_data.drop([target],axis=1).columns)
 card.fit(final_data[col], final_data[target])
 
 ```
+
 ```python
 ScoreCard(base_odds=0.016666666666666666, base_score=600, card=None,
 combiner=<lapras.transform.Combiner object at 0x000001EC0FB72438>,
 pdo=40, rate=2,
 transfer=<lapras.transform.WOETransformer object at 0x000001EC0FDAEF98>)
 ```
+
 ```python
 # ScoreCard class method expaination
 # ScoreCard.predict() predict score for each sample：
@@ -1139,6 +1166,7 @@ card.get_params()['combiner']
 card.get_params()['transfer']
 card.export()
 ```
+
 ```python
 card.intercept_:-2.5207582925622476
 card.coef_:[0.32080944 0.3452988  0.68294643 0.66842902]
@@ -1167,6 +1195,7 @@ card.coef_:[0.32080944 0.3452988  0.68294643 0.66842902]
 '[5.0,7.0)': 4.92,
 '[7.0,inf)': 11.37}}
 ```
+
 ```python
 # model performance metrics, including KS, AUC, ROC curve, KS curve, PR curve
 # Parameter details
@@ -1174,15 +1203,17 @@ card.coef_:[0.32080944 0.3452988  0.68294643 0.66842902]
 # target=None actual label
 lapras.perform(prob,final_result[target])
 ```
+
 ```python
 KS: 0.4160
 AUC: 0.7602
 ```
-![png](http://img.badtom.cn/output_19_1.png)
 
-![png](http://img.badtom.cn/output_19_2.png)
+![png](img/output_19_1.png)
 
-![png](http://img.badtom.cn/output_19_3.png)
+![png](img/output_19_2.png)
+
+![png](img/output_19_3.png)
 
 ```python
 # Parameter details
@@ -1192,6 +1223,7 @@ AUC: 0.7602
 # score_bond=None score boundary, default by 30, customized by list, e.g. [100,200,300]
 lapras.score_plot(final_result,score='score', target=target)
 ```
+
 ```python
 bad: [42, 78, 70, 104, 61, 28, 18, 1, 1, 0]
 good: [129, 249, 494, 795, 1075, 972, 825, 282, 164, 114]
@@ -1199,7 +1231,8 @@ all: [171, 327, 564, 899, 1136, 1000, 843, 283, 165, 114]
 all_rate: ['3.11%', '5.94%', '10.25%', '16.34%', '20.65%', '18.18%', '15.32%', '5.14%', '3.00%', '2.07%']
 bad_rate: ['24.56%', '23.85%', '12.41%', '11.57%', '5.37%', '2.80%', '2.14%', '0.35%', '0.61%', '0.00%']
 ```
-![png](http://img.badtom.cn/output_20_1.png)
+
+![png](img/output_20_1.png)
 
 ```python
 # LIFT show
@@ -1208,6 +1241,7 @@ bad_rate: ['24.56%', '23.85%', '12.41%', '11.57%', '5.37%', '2.80%', '2.14%', '0
 # recall_list=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] default
 lapras.LIFT(prob,final_data[target])
 ```
+
 <div>
 
 <table border="1" class="dataframe">
@@ -1297,6 +1331,7 @@ auto_card = lapras.auto_model(df=train_df,target=target,to_drop=to_drop,bins_sho
                               coef_negative = False, empty = 0.95, iv = 0.02, corr = 0.9, vif = False, method = 'mono',
                               n_bins=8, min_samples=0.05, pdo=40, rate=2, base_odds=1 / 60, base_score=600)
 ```
+
 ```python
 ——data filtering——
 original feature：6  filtered features：6
