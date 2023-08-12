@@ -1,7 +1,8 @@
 # LAPRAS
 
-[PyPi version][pypi-url]
-[Python version][docs-url]
+[![PyPi version](https://img.shields.io/badge/pypi-V0.0.22-%3Cgreen%3E)](https://github.com/yhangang/lapras)
+[![Python version](https://img.shields.io/pypi/pyversions/toad.svg?style=flat-square)](https://github.com/yhangang/lapras)
+
 
 Lapras is designed to make the model developing job easily and conveniently.
 It contains these functions below in one key operation: data exploratory analysis, feature selection, feature binning,
@@ -1365,7 +1366,3 @@ AUC: 0.7626
 Automatic modeling finished, time costing： 0 second
 ```
 
-[pypi-image]: https://img.shields.io/badge/pypi-V0.0.22-%3Cgreen%3E
-[pypi-url]: https://github.com/yhangang/lapras
-[python-image]: https://img.shields.io/pypi/pyversions/toad.svg?style=flat-square
-[docs-url]: https://github.com/yhangang/lapras
