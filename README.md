@@ -3,6 +3,9 @@
 [![PyPi version](https://img.shields.io/badge/pypi-V0.0.22-%3Cgreen%3E)](https://github.com/yhangang/lapras)
 [![Python version](https://img.shields.io/pypi/pyversions/toad.svg?style=flat-square)](https://github.com/yhangang/lapras)
 
+## Deprecated Warning
+This repository is deprecated, please move to https://github.com/datasciencekun/lapras.
+------
 
 Lapras is designed to make the model developing job easily and conveniently.
 It contains these functions below in one key operation: data exploratory analysis, feature selection, feature binning,
